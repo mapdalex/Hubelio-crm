@@ -2,6 +2,9 @@ import { Suspense } from 'react'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+
+// Disable static prerendering - requires database connection
+export const dynamic = 'force-dynamic'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Users, Ticket, Globe, ShoppingCart, AlertCircle, Clock } from 'lucide-react'
