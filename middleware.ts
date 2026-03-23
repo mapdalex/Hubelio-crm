@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { decrypt } from './lib/auth'
+import { decrypt } from './lib/auth-edge'
 
 // Öffentliche Routen (ohne Auth)
 const publicRoutes = ['/login', '/api/auth/login']
