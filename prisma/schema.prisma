@@ -1,0 +1,389 @@
+// Prisma Schema für CRM System
+// PostgreSQL Datenbank - selbst-gehostet via Docker/Coolify
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// BENUTZER & AUTHENTIFIZIERUNG
+// ============================================
+
+enum Role {
+  ADMIN
+  MITARBEITER
+  KUNDE
+  BUCHHALTUNG
+  GAST
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  role          Role      @default(GAST)
+  theme         String    @default("system") // light, dark, system
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLogin     DateTime?
+  isActive      Boolean   @default(true)
+
+  // Beziehungen
+  sessions      Session[]
+  tickets       Ticket[]        @relation("TicketCreator")
+  assignedTickets Ticket[]      @relation("TicketAssignee")
+  ticketComments TicketComment[]
+  todos         Todo[]
+  files         File[]
+  customer      Customer?       @relation("CustomerUser")
+  activityLogs  ActivityLog[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userAgent String?
+  ipAddress String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+// ============================================
+// KUNDEN
+// ============================================
+
+model Customer {
+  id              String    @id @default(cuid())
+  customerNumber  String    @unique
+  company         String?
+  firstName       String
+  lastName        String
+  email           String?
+  phone           String?
+  mobile          String?
+  street          String?
+  zipCode         String?
+  city            String?
+  country         String?   @default("Deutschland")
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  isActive        Boolean   @default(true)
+
+  // Beziehung zu User (wenn Kunde Login hat)
+  userId          String?   @unique
+  user            User?     @relation("CustomerUser", fields: [userId], references: [id])
+
+  // Beziehungen
+  contacts        Contact[]
+  computers       Computer[]
+  domains         Domain[]
+  services        Service[]
+  tickets         Ticket[]
+  files           File[]
+
+  @@index([customerNumber])
+  @@index([company])
+  @@index([lastName])
+  @@index([email])
+}
+
+model Contact {
+  id          String   @id @default(cuid())
+  customerId  String
+  firstName   String
+  lastName    String
+  position    String?
+  email       String?
+  phone       String?
+  mobile      String?
+  isPrimary   Boolean  @default(false)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+}
+
+// ============================================
+// COMPUTER / PCs
+// ============================================
+
+model Computer {
+  id              String    @id @default(cuid())
+  customerId      String
+  name            String
+  type            String?   // Desktop, Laptop, Server, etc.
+  manufacturer    String?
+  model           String?
+  serialNumber    String?
+  operatingSystem String?
+  processor       String?
+  ram             String?
+  storage         String?
+  ipAddress       String?
+  macAddress      String?
+  purchaseDate    DateTime?
+  warrantyUntil   DateTime?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  isActive        Boolean   @default(true)
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tickets  Ticket[]
+
+  @@index([customerId])
+  @@index([name])
+}
+
+// ============================================
+// VERKAUF - DOMAINS & SERVICES
+// ============================================
+
+model Domain {
+  id              String    @id @default(cuid())
+  customerId      String
+  domainName      String
+  registrar       String?
+  purchaseDate    DateTime?
+  expiryDate      DateTime?
+  renewalDate     DateTime?
+  autoRenew       Boolean   @default(true)
+  costPrice       Decimal?  @db.Decimal(10, 2)
+  sellPrice       Decimal?  @db.Decimal(10, 2)
+  billingCycle    String?   // monthly, yearly, etc.
+  status          String    @default("active") // active, expired, transferred
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([domainName])
+  @@index([expiryDate])
+  @@index([renewalDate])
+}
+
+model Service {
+  id              String    @id @default(cuid())
+  customerId      String
+  name            String
+  description     String?
+  type            String?   // Hosting, Support, Wartung, etc.
+  startDate       DateTime?
+  endDate         DateTime?
+  renewalDate     DateTime?
+  billingCycle    String?   // monthly, yearly, etc.
+  costPrice       Decimal?  @db.Decimal(10, 2)
+  sellPrice       Decimal?  @db.Decimal(10, 2)
+  status          String    @default("active") // active, paused, cancelled
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([renewalDate])
+  @@index([status])
+}
+
+// ============================================
+// TICKETS
+// ============================================
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Ticket {
+  id            String         @id @default(cuid())
+  ticketNumber  String         @unique
+  subject       String
+  description   String
+  status        TicketStatus   @default(OPEN)
+  priority      TicketPriority @default(MEDIUM)
+  
+  // Beziehungen
+  customerId    String?
+  computerId    String?
+  createdById   String
+  assignedToId  String?
+  
+  // E-Mail Referenz
+  emailMessageId String?
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  closedAt      DateTime?
+
+  customer      Customer?      @relation(fields: [customerId], references: [id])
+  computer      Computer?      @relation(fields: [computerId], references: [id])
+  createdBy     User           @relation("TicketCreator", fields: [createdById], references: [id])
+  assignedTo    User?          @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  comments      TicketComment[]
+  attachments   File[]
+
+  @@index([ticketNumber])
+  @@index([status])
+  @@index([customerId])
+  @@index([assignedToId])
+  @@index([createdAt])
+}
+
+model TicketComment {
+  id          String   @id @default(cuid())
+  ticketId    String
+  userId      String
+  content     String
+  isInternal  Boolean  @default(false) // Interne Notiz oder öffentlich
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([ticketId])
+}
+
+// ============================================
+// E-MAIL EINSTELLUNGEN
+// ============================================
+
+model EmailSettings {
+  id            String  @id @default(cuid())
+  name          String
+  protocol      String  // IMAP, POP3
+  host          String
+  port          Int
+  username      String
+  password      String  // Encrypted
+  useSsl        Boolean @default(true)
+  smtpHost      String?
+  smtpPort      Int?
+  smtpUsername  String?
+  smtpPassword  String? // Encrypted
+  smtpUseSsl    Boolean @default(true)
+  isActive      Boolean @default(true)
+  lastSync      DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// ============================================
+// TODOS
+// ============================================
+
+model Todo {
+  id          String    @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  dueDate     DateTime?
+  priority    String    @default("medium") // low, medium, high
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([dueDate])
+  @@index([isCompleted])
+}
+
+// ============================================
+// DATENABLAGE / FILES
+// ============================================
+
+model File {
+  id          String   @id @default(cuid())
+  filename    String
+  originalName String
+  mimeType    String
+  size        Int
+  path        String
+  
+  // Optionale Verknüpfungen
+  customerId  String?
+  ticketId    String?
+  uploadedById String
+  
+  createdAt   DateTime @default(now())
+
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  ticket     Ticket?   @relation(fields: [ticketId], references: [id])
+  uploadedBy User      @relation(fields: [uploadedById], references: [id])
+
+  @@index([customerId])
+  @@index([ticketId])
+}
+
+// ============================================
+// SYSTEM EINSTELLUNGEN
+// ============================================
+
+model SystemSettings {
+  id        String @id @default("system")
+  companyName String @default("Mein Unternehmen")
+  companyLogo String?
+  companyAddress String?
+  companyPhone String?
+  companyEmail String?
+  defaultLanguage String @default("de")
+  ticketPrefix String @default("TKT")
+  customerPrefix String @default("KD")
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// AKTIVITÄTSLOG
+// ============================================
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  entity      String
+  entityId    String?
+  details     String?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entity])
+  @@index([createdAt])
+}
