@@ -1,8 +1,9 @@
+// CRM Middleware - Edge Runtime kompatibel (kein Prisma)
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
 
-// Edge-kompatible JWT Verifikation - kein Prisma Import!
+// JWT Verifikation direkt hier - keine externen Imports die Prisma enthalten
 const secretKey = process.env.JWT_SECRET || 'fallback-secret-change-in-production'
 const key = new TextEncoder().encode(secretKey)
 
