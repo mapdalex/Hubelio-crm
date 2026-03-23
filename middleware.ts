@@ -1,39 +1,63 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { decrypt } from './lib/auth-edge'
+import { jwtVerify } from 'jose'
 
-// Öffentliche Routen (ohne Auth)
-const publicRoutes = ['/login', '/api/auth/login']
+// Edge Runtime explizit deklarieren
+export const runtime = 'edge'
 
-// Routen die bestimmte Rollen erfordern
-const adminRoutes = ['/admin', '/settings/system']
-const employeeRoutes = ['/tickets', '/customers', '/sales', '/todos', '/files']
+const secretKey = process.env.JWT_SECRET || 'fallback-secret-change-in-production'
+const key = new TextEncoder().encode(secretKey)
+
+type SessionPayload = {
+  userId: string
+  email: string
+  name: string
+  role: string
+  expiresAt: string
+}
+
+async function decryptToken(token: string): Promise<SessionPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, key, {
+      algorithms: ['HS256'],
+    })
+    return payload as unknown as SessionPayload
+  } catch {
+    return null
+  }
+}
+
+// Oeffentliche Routen (ohne Auth)
+const publicRoutes = ['/login', '/setup', '/api/auth/login', '/api/auth/setup']
+
+// Admin-only Routen
+const adminRoutes = ['/admin']
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
   
-  // Statische Assets überspringen
+  // Statische Assets ueberspringen
   if (
     path.startsWith('/_next') ||
     path.startsWith('/api/auth') ||
-    path.includes('.') // Dateien wie .ico, .png etc.
+    path.includes('.')
   ) {
     return NextResponse.next()
   }
   
-  // Öffentliche Routen erlauben
-  if (publicRoutes.includes(path)) {
+  // Oeffentliche Routen erlauben
+  if (publicRoutes.some(route => path.startsWith(route))) {
     return NextResponse.next()
   }
   
-  // Session prüfen
+  // Session pruefen
   const token = request.cookies.get('session')?.value
   
   if (!token) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
   
-  const session = await decrypt(token)
+  const session = await decryptToken(token)
   
   if (!session || new Date(session.expiresAt) < new Date()) {
     const response = NextResponse.redirect(new URL('/login', request.url))
@@ -41,25 +65,10 @@ export async function middleware(request: NextRequest) {
     return response
   }
   
-  // Admin-Routen prüfen
+  // Admin-Routen pruefen
   if (adminRoutes.some(route => path.startsWith(route))) {
     if (session.role !== 'ADMIN') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
-  }
-  
-  // Mitarbeiter-Routen prüfen (Admin hat auch Zugriff)
-  if (employeeRoutes.some(route => path.startsWith(route))) {
-    if (!['ADMIN', 'MITARBEITER', 'BUCHHALTUNG'].includes(session.role)) {
-      // Kunden dürfen nur bestimmte Bereiche sehen
-      if (session.role === 'KUNDE') {
-        // Kunden dürfen ihre eigenen Tickets sehen
-        if (!path.startsWith('/tickets') && !path.startsWith('/files')) {
-          return NextResponse.redirect(new URL('/dashboard', request.url))
-        }
-      } else {
-        return NextResponse.redirect(new URL('/dashboard', request.url))
-      }
     }
   }
   

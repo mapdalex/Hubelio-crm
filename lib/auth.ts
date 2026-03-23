@@ -4,7 +4,7 @@ import { db } from './db'
 import bcrypt from 'bcryptjs'
 import type { Role, User } from '@prisma/client'
 
-const secretKey = process.env.AUTH_SECRET || 'fallback-secret-change-in-production'
+const secretKey = process.env.JWT_SECRET || 'fallback-secret-change-in-production'
 const key = new TextEncoder().encode(secretKey)
 
 export type SessionPayload = {
