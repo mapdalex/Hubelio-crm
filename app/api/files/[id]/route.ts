@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { unlink } from 'fs/promises'
 import path from 'path'
@@ -16,7 +16,7 @@ export async function DELETE(
 
     const { id } = await params
 
-    const file = await prisma.file.findUnique({
+    const file = await db.file.findUnique({
       where: { id }
     })
 
@@ -33,7 +33,7 @@ export async function DELETE(
     }
 
     // Lösche Datenbank-Eintrag
-    await prisma.file.delete({
+    await db.file.delete({
       where: { id }
     })
 

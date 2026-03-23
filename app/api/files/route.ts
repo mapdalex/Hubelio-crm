@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       where.folderId = null
     }
 
-    const files = await prisma.file.findMany({
+    const files = await db.file.findMany({
       where,
       include: {
         uploadedBy: {
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     await writeFile(filePath, buffer)
 
     // Erstelle Datenbank-Eintrag
-    const newFile = await prisma.file.create({
+    const newFile = await db.file.create({
       data: {
         name: file.name,
         path: `/uploads/${fileName}`,

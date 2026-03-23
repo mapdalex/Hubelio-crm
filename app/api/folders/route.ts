@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const parentId = searchParams.get('parentId')
 
-    const folders = await prisma.folder.findMany({
+    const folders = await db.folder.findMany({
       where: {
         parentId: parentId || null
       },
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name ist erforderlich' }, { status: 400 })
     }
 
-    const folder = await prisma.folder.create({
+    const folder = await db.folder.create({
       data: {
         name,
         parentId: parentId || null

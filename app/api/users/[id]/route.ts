@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 import bcrypt from 'bcryptjs'
 
@@ -28,7 +28,7 @@ export async function PATCH(
       updateData.passwordHash = await bcrypt.hash(password, 12)
     }
 
-    const user = await prisma.user.update({
+    const user = await db.user.update({
       where: { id },
       data: updateData,
       select: {
@@ -66,7 +66,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Sie koennen sich nicht selbst loeschen' }, { status: 400 })
     }
 
-    await prisma.user.delete({
+    await db.user.delete({
       where: { id }
     })
 

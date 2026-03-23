@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 
 export async function GET() {
@@ -9,7 +9,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
 
-    const settings = await prisma.settings.findMany()
+    const settings = await db.settings.findMany()
     
     // Konvertiere zu Key-Value Objekt
     const settingsObj: Record<string, string> = {}
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     // Upsert alle Einstellungen
     for (const [key, value] of Object.entries(body)) {
-      await prisma.settings.upsert({
+      await db.settings.upsert({
         where: { key },
         update: { value: String(value) },
         create: { key, value: String(value) }

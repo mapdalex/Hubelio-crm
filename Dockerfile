@@ -56,5 +56,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Prisma Migration und Start
-CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
+# Prisma db push und Start (erstellt Tabellen falls nicht vorhanden)
+CMD ["sh", "-c", "npx prisma db push --skip-generate && node server.js"]
