@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Building2, User, Phone, Mail, MapPin, Plus, Monitor, Ticket, Edit, Trash2 } from 'lucide-react'
+import { ArrowLeft, Building2, User, Phone, Mail, MapPin, Plus, Monitor, Ticket, Edit, Trash2, Globe, Wrench, CalendarClock, Euro } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -64,6 +64,31 @@ type Computer = {
   notes: string | null
 }
 
+type Domain = {
+  id: string
+  domainName: string
+  registrar: string | null
+  expiryDate: string | null
+  renewalDate: string | null
+  autoRenew: boolean
+  sellPrice: number | null
+  billingCycle: string | null
+  status: string
+  notes: string | null
+}
+
+type Service = {
+  id: string
+  name: string
+  description: string | null
+  type: string | null
+  renewalDate: string | null
+  billingCycle: string | null
+  sellPrice: number | null
+  status: string
+  notes: string | null
+}
+
 type TicketItem = {
   id: string
   ticketNumber: string
@@ -90,6 +115,8 @@ type Customer = {
   isActive: boolean
   contacts: Contact[]
   computers: Computer[]
+  domains: Domain[]
+  services: Service[]
   tickets: TicketItem[]
 }
 
@@ -352,6 +379,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
           <TabsTrigger value="contacts">Kontakte ({customer.contacts.length})</TabsTrigger>
           <TabsTrigger value="computers">PCs ({customer.computers.length})</TabsTrigger>
           <TabsTrigger value="tickets">Tickets ({customer.tickets.length})</TabsTrigger>
+          <TabsTrigger value="sales">Verkauf ({(customer.domains?.length ?? 0) + (customer.services?.length ?? 0)})</TabsTrigger>
         </TabsList>
         
         <TabsContent value="overview" className="space-y-4">
@@ -883,6 +911,156 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+        <TabsContent value="sales" className="space-y-6">
+          {/* Domains */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold flex items-center gap-2">
+                <Globe className="h-4 w-4 text-muted-foreground" />
+                Domains ({customer.domains?.length ?? 0})
+              </h3>
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/sales/domains/new?customer=${id}`}>
+                  <Plus className="mr-2 h-3 w-3" />
+                  Domain hinzufuegen
+                </Link>
+              </Button>
+            </div>
+            {!customer.domains?.length ? (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <Globe className="mx-auto h-10 w-10 text-muted-foreground" />
+                  <p className="mt-3 text-sm text-muted-foreground">Keine Domains vorhanden</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="p-0">
+                  <div className="divide-y">
+                    {customer.domains.map((domain) => {
+                      const isExpiringSoon = domain.expiryDate && new Date(domain.expiryDate) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                      const isExpired = domain.expiryDate && new Date(domain.expiryDate) < new Date()
+                      return (
+                        <div key={domain.id} className="flex items-center justify-between px-4 py-3 hover:bg-muted/50">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <div className="min-w-0">
+                              <div className="font-medium truncate">{domain.domainName}</div>
+                              <div className="text-xs text-muted-foreground flex items-center gap-3 mt-0.5 flex-wrap">
+                                {domain.registrar && <span>{domain.registrar}</span>}
+                                {domain.expiryDate && (
+                                  <span className={isExpired ? 'text-destructive font-medium' : isExpiringSoon ? 'text-amber-600 font-medium' : ''}>
+                                    Ablauf: {format(new Date(domain.expiryDate), 'dd.MM.yyyy', { locale: de })}
+                                  </span>
+                                )}
+                                {domain.billingCycle && <span>{domain.billingCycle}</span>}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0 ml-4">
+                            {domain.sellPrice != null && (
+                              <span className="text-sm font-medium flex items-center gap-0.5">
+                                <Euro className="h-3 w-3" />
+                                {Number(domain.sellPrice).toFixed(2)}
+                              </span>
+                            )}
+                            <Badge variant={
+                              isExpired ? 'destructive' :
+                              domain.status === 'active' ? 'default' :
+                              domain.status === 'expired' ? 'destructive' : 'secondary'
+                            }>
+                              {isExpired ? 'Abgelaufen' :
+                               domain.status === 'active' ? 'Aktiv' :
+                               domain.status === 'transferred' ? 'Transferiert' : domain.status}
+                            </Badge>
+                            {domain.autoRenew && (
+                              <Badge variant="outline" className="text-xs">
+                                <CalendarClock className="mr-1 h-3 w-3" />
+                                Auto
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Services */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold flex items-center gap-2">
+                <Wrench className="h-4 w-4 text-muted-foreground" />
+                Services ({customer.services?.length ?? 0})
+              </h3>
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/sales/services/new?customer=${id}`}>
+                  <Plus className="mr-2 h-3 w-3" />
+                  Service hinzufuegen
+                </Link>
+              </Button>
+            </div>
+            {!customer.services?.length ? (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <Wrench className="mx-auto h-10 w-10 text-muted-foreground" />
+                  <p className="mt-3 text-sm text-muted-foreground">Keine Services vorhanden</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="p-0">
+                  <div className="divide-y">
+                    {customer.services.map((service) => {
+                      const isRenewingSoon = service.renewalDate && new Date(service.renewalDate) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                      return (
+                        <div key={service.id} className="flex items-center justify-between px-4 py-3 hover:bg-muted/50">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <Wrench className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <div className="min-w-0">
+                              <div className="font-medium truncate">{service.name}</div>
+                              <div className="text-xs text-muted-foreground flex items-center gap-3 mt-0.5 flex-wrap">
+                                {service.type && <span>{service.type}</span>}
+                                {service.renewalDate && (
+                                  <span className={isRenewingSoon ? 'text-amber-600 font-medium' : ''}>
+                                    Verlaengerung: {format(new Date(service.renewalDate), 'dd.MM.yyyy', { locale: de })}
+                                  </span>
+                                )}
+                                {service.billingCycle && <span>{service.billingCycle}</span>}
+                              </div>
+                              {service.description && (
+                                <div className="text-xs text-muted-foreground mt-0.5 truncate">{service.description}</div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0 ml-4">
+                            {service.sellPrice != null && (
+                              <span className="text-sm font-medium flex items-center gap-0.5">
+                                <Euro className="h-3 w-3" />
+                                {Number(service.sellPrice).toFixed(2)}
+                              </span>
+                            )}
+                            <Badge variant={
+                              service.status === 'active' ? 'default' :
+                              service.status === 'paused' ? 'secondary' : 'outline'
+                            }>
+                              {service.status === 'active' ? 'Aktiv' :
+                               service.status === 'paused' ? 'Pausiert' :
+                               service.status === 'cancelled' ? 'Gekuendigt' : service.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
       
