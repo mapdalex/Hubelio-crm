@@ -50,8 +50,11 @@ RUN adduser --system --uid 1001 nextjs
 # Standalone Output kopieren
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.pnpm/@prisma+client*/node_modules/.prisma ./node_modules/.prisma
+
+# Prisma vollstaendig kopieren fuer db push
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 # Next.js standalone output
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
@@ -60,6 +63,25 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Uploads Verzeichnis erstellen
 RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads
 
+# Startup script erstellen
+COPY --chmod=755 <<EOF /app/start.sh
+#!/bin/sh
+set -e
+
+echo "Warte auf Datenbank..."
+sleep 5
+
+echo "Fuehre Prisma db push aus..."
+npx prisma db push --accept-data-loss || {
+  echo "Prisma db push fehlgeschlagen, versuche es erneut..."
+  sleep 3
+  npx prisma db push --accept-data-loss
+}
+
+echo "Starte Server..."
+exec node server.js
+EOF
+
 USER nextjs
 
 EXPOSE 3000
@@ -67,5 +89,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Prisma db push und Start (erstellt Tabellen falls nicht vorhanden)
-CMD ["sh", "-c", "npx prisma db push && node server.js"]
+CMD ["/app/start.sh"]
