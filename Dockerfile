@@ -51,14 +51,13 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 
-# Prisma vollstaendig kopieren fuer db push
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-
-# Next.js standalone output
+# Next.js standalone output (enthaelt bereits node_modules mit Prisma Client)
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Prisma CLI fuer db push kopieren (separat, da nicht in standalone enthalten)
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/@prisma/engines ./node_modules/@prisma/engines
 
 # Uploads Verzeichnis erstellen
 RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads
