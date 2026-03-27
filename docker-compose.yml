@@ -37,6 +37,8 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-crm_user}:${POSTGRES_PASSWORD:-change_me_in_production}@db:5432/${POSTGRES_DB:-crm_database}
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production-min-32-chars}
       NODE_ENV: production
+      # Setze auf 'false' wenn du kein HTTPS verwendest (localhost/Docker ohne SSL)
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
     ports:
       - "3000:3000"
     volumes:
