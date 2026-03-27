@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Globe, AlertTriangle, Calendar } from 'lucide-react'
+import { Plus, Search, Globe, AlertTriangle, Calendar, Edit, Trash2, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -25,6 +25,24 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -33,6 +51,7 @@ import {
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Spinner } from '@/components/ui/spinner'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { format, isPast, addDays, isBefore } from 'date-fns'
@@ -58,7 +77,146 @@ type Domain = {
   sellPrice: number | null
   billingCycle: string | null
   status: string
+  notes: string | null
   customer: Customer
+}
+
+function DomainForm({
+  domain,
+  customers,
+  onSubmit,
+  onCancel,
+  isSubmitting,
+}: {
+  domain?: Domain
+  customers: Customer[]
+  onSubmit: (data: Record<string, unknown>) => void
+  onCancel: () => void
+  isSubmitting: boolean
+}) {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    onSubmit({
+      customerId: formData.get('customerId'),
+      domainName: formData.get('domainName'),
+      registrar: formData.get('registrar'),
+      purchaseDate: formData.get('purchaseDate') || null,
+      expiryDate: formData.get('expiryDate') || null,
+      renewalDate: formData.get('renewalDate') || null,
+      autoRenew: (e.currentTarget.querySelector('#autoRenew') as HTMLInputElement)?.checked ?? true,
+      costPrice: formData.get('costPrice') ? parseFloat(formData.get('costPrice') as string) : null,
+      sellPrice: formData.get('sellPrice') ? parseFloat(formData.get('sellPrice') as string) : null,
+      billingCycle: formData.get('billingCycle'),
+      status: formData.get('status'),
+      notes: formData.get('notes'),
+    })
+  }
+
+  const toInputDate = (val: string | null | undefined) => {
+    if (!val) return ''
+    return format(new Date(val), 'yyyy-MM-dd')
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="grid gap-4 py-4">
+        {!domain && (
+          <div className="grid gap-2">
+            <Label htmlFor="customerId">Kunde *</Label>
+            <Select name="customerId" required>
+              <SelectTrigger id="customerId">
+                <SelectValue placeholder="Kunde waehlen" />
+              </SelectTrigger>
+              <SelectContent>
+                {customers.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.company || `${c.firstName} ${c.lastName}`} ({c.customerNumber})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="domainName">Domain *</Label>
+            <Input id="domainName" name="domainName" required placeholder="beispiel.de" defaultValue={domain?.domainName} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="registrar">Registrar</Label>
+            <Input id="registrar" name="registrar" placeholder="z.B. IONOS, Strato" defaultValue={domain?.registrar ?? ''} />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="purchaseDate">Kaufdatum</Label>
+            <Input id="purchaseDate" name="purchaseDate" type="date" defaultValue={toInputDate(domain?.purchaseDate)} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="expiryDate">Ablaufdatum</Label>
+            <Input id="expiryDate" name="expiryDate" type="date" defaultValue={toInputDate(domain?.expiryDate)} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="renewalDate">Verlaengerung</Label>
+            <Input id="renewalDate" name="renewalDate" type="date" defaultValue={toInputDate(domain?.renewalDate)} />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="costPrice">Einkaufspreis (EUR)</Label>
+            <Input id="costPrice" name="costPrice" type="number" step="0.01" defaultValue={domain?.costPrice ?? ''} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="sellPrice">Verkaufspreis (EUR)</Label>
+            <Input id="sellPrice" name="sellPrice" type="number" step="0.01" defaultValue={domain?.sellPrice ?? ''} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="billingCycle">Abrechnungszyklus</Label>
+            <Select name="billingCycle" defaultValue={domain?.billingCycle ?? 'yearly'}>
+              <SelectTrigger id="billingCycle"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="monthly">Monatlich</SelectItem>
+                <SelectItem value="yearly">Jaehrlich</SelectItem>
+                <SelectItem value="2years">2 Jahre</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="status">Status</Label>
+            <Select name="status" defaultValue={domain?.status ?? 'active'}>
+              <SelectTrigger id="status"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Aktiv</SelectItem>
+                <SelectItem value="expired">Abgelaufen</SelectItem>
+                <SelectItem value="transferred">Transferiert</SelectItem>
+                <SelectItem value="cancelled">Gekuendigt</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-end pb-1">
+            <div className="flex items-center gap-2">
+              <Checkbox id="autoRenew" name="autoRenew" defaultChecked={domain?.autoRenew ?? true} />
+              <Label htmlFor="autoRenew">Auto-Verlaengerung</Label>
+            </div>
+          </div>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="notes">Notizen</Label>
+          <Textarea id="notes" name="notes" rows={2} defaultValue={domain?.notes ?? ''} />
+        </div>
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>Abbrechen</Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting && <Spinner className="mr-2 h-4 w-4" />}
+          {domain ? 'Speichern' : 'Domain anlegen'}
+        </Button>
+      </DialogFooter>
+    </form>
+  )
 }
 
 export default function DomainsPage() {
@@ -70,8 +228,9 @@ export default function DomainsPage() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [isCreating, setIsCreating] = useState(false)
-  
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [editingDomain, setEditingDomain] = useState<Domain | null>(null)
+
   const loadDomains = useCallback(async () => {
     setIsLoading(true)
     try {
@@ -85,7 +244,7 @@ export default function DomainsPage() {
       setIsLoading(false)
     }
   }, [page, search, filter])
-  
+
   const loadCustomers = useCallback(async () => {
     try {
       const res = await fetch('/api/customers?limit=100')
@@ -95,43 +254,22 @@ export default function DomainsPage() {
       console.error('Error loading customers:', error)
     }
   }, [])
-  
+
+  useEffect(() => { loadCustomers() }, [loadCustomers])
+
   useEffect(() => {
-    loadCustomers()
-  }, [loadCustomers])
-  
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadDomains()
-    }, 300)
+    const timer = setTimeout(() => { loadDomains() }, 300)
     return () => clearTimeout(timer)
   }, [loadDomains])
-  
-  const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setIsCreating(true)
-    
-    const formData = new FormData(e.currentTarget)
-    const data = {
-      customerId: formData.get('customerId'),
-      domainName: formData.get('domainName'),
-      registrar: formData.get('registrar'),
-      purchaseDate: formData.get('purchaseDate'),
-      expiryDate: formData.get('expiryDate'),
-      renewalDate: formData.get('renewalDate'),
-      costPrice: formData.get('costPrice') ? parseFloat(formData.get('costPrice') as string) : null,
-      sellPrice: formData.get('sellPrice') ? parseFloat(formData.get('sellPrice') as string) : null,
-      billingCycle: formData.get('billingCycle'),
-      notes: formData.get('notes'),
-    }
-    
+
+  const handleCreate = async (data: Record<string, unknown>) => {
+    setIsSubmitting(true)
     try {
       const res = await fetch('/api/domains', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
-      
       if (res.ok) {
         setIsCreateOpen(false)
         loadDomains()
@@ -139,24 +277,54 @@ export default function DomainsPage() {
     } catch (error) {
       console.error('Error creating domain:', error)
     } finally {
-      setIsCreating(false)
+      setIsSubmitting(false)
     }
   }
-  
+
+  const handleEdit = async (data: Record<string, unknown>) => {
+    if (!editingDomain) return
+    setIsSubmitting(true)
+    try {
+      const res = await fetch(`/api/domains/${editingDomain.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (res.ok) {
+        setEditingDomain(null)
+        loadDomains()
+      }
+    } catch (error) {
+      console.error('Error updating domain:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    try {
+      await fetch(`/api/domains/${id}`, { method: 'DELETE' })
+      loadDomains()
+    } catch (error) {
+      console.error('Error deleting domain:', error)
+    }
+  }
+
   const getExpiryStatus = (expiryDate: string | null) => {
     if (!expiryDate) return null
     const date = new Date(expiryDate)
-    const now = new Date()
-    
-    if (isPast(date)) {
-      return { label: 'Abgelaufen', variant: 'destructive' as const }
-    }
-    if (isBefore(date, addDays(now, 30))) {
-      return { label: 'Bald ablaufend', variant: 'default' as const }
-    }
+    if (isPast(date)) return { label: 'Abgelaufen', variant: 'destructive' as const }
+    if (isBefore(date, addDays(new Date(), 30))) return { label: 'Bald ablaufend', variant: 'default' as const }
     return null
   }
-  
+
+  const statusLabel: Record<string, string> = {
+    active: 'Aktiv',
+    expired: 'Abgelaufen',
+    transferred: 'Transferiert',
+    cancelled: 'Gekuendigt',
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -172,111 +340,47 @@ export default function DomainsPage() {
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
-            <form onSubmit={handleCreate}>
-              <DialogHeader>
-                <DialogTitle>Neue Domain anlegen</DialogTitle>
-                <DialogDescription>
-                  Erfassen Sie eine neue Domain fuer einen Kunden
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="customerId">Kunde *</Label>
-                  <Select name="customerId" required>
-                    <SelectTrigger id="customerId">
-                      <SelectValue placeholder="Kunde waehlen" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customers.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.id}>
-                          {customer.company || `${customer.firstName} ${customer.lastName}`} ({customer.customerNumber})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="domainName">Domain *</Label>
-                    <Input id="domainName" name="domainName" required placeholder="beispiel.de" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="registrar">Registrar</Label>
-                    <Input id="registrar" name="registrar" placeholder="z.B. IONOS, Strato" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="purchaseDate">Kaufdatum</Label>
-                    <Input id="purchaseDate" name="purchaseDate" type="date" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="expiryDate">Ablaufdatum</Label>
-                    <Input id="expiryDate" name="expiryDate" type="date" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="renewalDate">Verlaengerung</Label>
-                    <Input id="renewalDate" name="renewalDate" type="date" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="costPrice">Einkaufspreis (EUR)</Label>
-                    <Input id="costPrice" name="costPrice" type="number" step="0.01" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="sellPrice">Verkaufspreis (EUR)</Label>
-                    <Input id="sellPrice" name="sellPrice" type="number" step="0.01" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="billingCycle">Abrechnungszyklus</Label>
-                    <Select name="billingCycle" defaultValue="yearly">
-                      <SelectTrigger id="billingCycle">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="monthly">Monatlich</SelectItem>
-                        <SelectItem value="yearly">Jaehrlich</SelectItem>
-                        <SelectItem value="2years">2 Jahre</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="notes">Notizen</Label>
-                  <Textarea id="notes" name="notes" rows={2} />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
-                  Abbrechen
-                </Button>
-                <Button type="submit" disabled={isCreating}>
-                  {isCreating && <Spinner className="mr-2 h-4 w-4" />}
-                  Domain anlegen
-                </Button>
-              </DialogFooter>
-            </form>
+            <DialogHeader>
+              <DialogTitle>Neue Domain anlegen</DialogTitle>
+              <DialogDescription>Erfassen Sie eine neue Domain fuer einen Kunden</DialogDescription>
+            </DialogHeader>
+            <DomainForm customers={customers} onSubmit={handleCreate} onCancel={() => setIsCreateOpen(false)} isSubmitting={isSubmitting} />
           </DialogContent>
         </Dialog>
       </div>
-      
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingDomain} onOpenChange={(open) => !open && setEditingDomain(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Domain bearbeiten</DialogTitle>
+            <DialogDescription>Angaben zur Domain aktualisieren</DialogDescription>
+          </DialogHeader>
+          {editingDomain && (
+            <DomainForm
+              domain={editingDomain}
+              customers={customers}
+              onSubmit={handleEdit}
+              onCancel={() => setEditingDomain(null)}
+              isSubmitting={isSubmitting}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-sm">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Domain oder Kunde suchen..."
                 className="pl-9"
                 value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPage(1)
-                }}
+                onChange={(e) => { setSearch(e.target.value); setPage(1) }}
               />
             </div>
-            <Tabs value={filter} onValueChange={(v) => { setFilter(v); setPage(1); }}>
+            <Tabs value={filter} onValueChange={(v) => { setFilter(v); setPage(1) }}>
               <TabsList>
                 <TabsTrigger value="all">Alle</TabsTrigger>
                 <TabsTrigger value="expiring">
@@ -312,6 +416,7 @@ export default function DomainsPage() {
                     <TableHead>Ablaufdatum</TableHead>
                     <TableHead className="text-right">Preis</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="w-10" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -321,8 +426,11 @@ export default function DomainsPage() {
                       <TableRow key={domain.id}>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Globe className="h-4 w-4 text-muted-foreground" />
+                            <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
                             <span className="font-medium">{domain.domainName}</span>
+                            {domain.autoRenew && (
+                              <Badge variant="outline" className="text-xs">Auto</Badge>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -330,56 +438,75 @@ export default function DomainsPage() {
                             {domain.customer.company || `${domain.customer.firstName} ${domain.customer.lastName}`}
                           </Link>
                         </TableCell>
-                        <TableCell>{domain.registrar || '-'}</TableCell>
+                        <TableCell className="text-muted-foreground">{domain.registrar || '-'}</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-3 w-3 text-muted-foreground" />
-                            {domain.expiryDate 
-                              ? format(new Date(domain.expiryDate), 'dd.MM.yyyy', { locale: de })
-                              : '-'
-                            }
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {domain.expiryDate ? (
+                              <span className="flex items-center gap-1 text-sm">
+                                <Calendar className="h-3 w-3 text-muted-foreground" />
+                                {format(new Date(domain.expiryDate), 'dd.MM.yyyy', { locale: de })}
+                              </span>
+                            ) : '-'}
                             {expiryStatus && (
-                              <Badge variant={expiryStatus.variant} className="text-xs">
-                                {expiryStatus.label}
-                              </Badge>
+                              <Badge variant={expiryStatus.variant} className="text-xs">{expiryStatus.label}</Badge>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-right">
-                          {domain.sellPrice ? `${domain.sellPrice} EUR` : '-'}
+                        <TableCell className="text-right font-medium">
+                          {domain.sellPrice != null ? `${Number(domain.sellPrice).toFixed(2)} EUR` : '-'}
                         </TableCell>
                         <TableCell>
                           <Badge variant={domain.status === 'active' ? 'default' : 'secondary'}>
-                            {domain.status}
+                            {statusLabel[domain.status] ?? domain.status}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <AlertDialog>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => setEditingDomain(domain)}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Bearbeiten
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem className="text-destructive focus:text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Loeschen
+                                  </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Domain loeschen?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Moechten Sie die Domain <strong>{domain.domainName}</strong> wirklich loeschen? Diese Aktion kann nicht rueckgaengig gemacht werden.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(domain.id)}>Loeschen</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </TableCell>
                       </TableRow>
                     )
                   })}
                 </TableBody>
               </Table>
-              
+
               {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-2 mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page === 1}
-                    onClick={() => setPage(p => p - 1)}
-                  >
-                    Zurueck
-                  </Button>
-                  <span className="text-sm text-muted-foreground">
-                    Seite {page} von {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page === totalPages}
-                    onClick={() => setPage(p => p + 1)}
-                  >
-                    Weiter
-                  </Button>
+                  <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Zurueck</Button>
+                  <span className="text-sm text-muted-foreground">Seite {page} von {totalPages}</span>
+                  <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Weiter</Button>
                 </div>
               )}
             </>
