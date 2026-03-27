@@ -59,7 +59,6 @@ export async function createSession(user: Pick<User, 'id' | 'email' | 'name' | '
   // Cookie setzen
   // WICHTIG: secure nur bei HTTPS, sonst wird Cookie in Docker/localhost nicht gesetzt
   const isSecure = process.env.NODE_ENV === 'production' && process.env.COOKIE_SECURE !== 'false'
-  console.log('[Auth] Setting cookie - secure:', isSecure, 'NODE_ENV:', process.env.NODE_ENV)
   
   const cookieStore = await cookies()
   cookieStore.set('session', token, {
@@ -69,7 +68,6 @@ export async function createSession(user: Pick<User, 'id' | 'email' | 'name' | '
     sameSite: 'lax',
     path: '/',
   })
-  console.log('[Auth] Cookie set successfully')
   
   // Last Login aktualisieren
   await db.user.update({

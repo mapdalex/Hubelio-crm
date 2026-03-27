@@ -102,6 +102,8 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const [isSaving, setIsSaving] = useState(false)
   const [isContactOpen, setIsContactOpen] = useState(false)
   const [isComputerOpen, setIsComputerOpen] = useState(false)
+  const [editingContact, setEditingContact] = useState<Contact | null>(null)
+  const [editingComputer, setEditingComputer] = useState<Computer | null>(null)
   
   const loadCustomer = useCallback(async () => {
     try {
@@ -202,6 +204,82 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
       }
     } catch (error) {
       console.error('Error adding computer:', error)
+    }
+  }
+  
+  const handleEditContact = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!editingContact) return
+    
+    const formData = new FormData(e.currentTarget)
+    const data = {
+      firstName: formData.get('firstName'),
+      lastName: formData.get('lastName'),
+      position: formData.get('position'),
+      email: formData.get('email'),
+      phone: formData.get('phone'),
+      mobile: formData.get('mobile'),
+      isPrimary: formData.get('isPrimary') === 'on',
+    }
+    
+    try {
+      const res = await fetch(`/api/contacts/${editingContact.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      
+      if (res.ok) {
+        setEditingContact(null)
+        loadCustomer()
+      }
+    } catch (error) {
+      console.error('Error editing contact:', error)
+    }
+  }
+  
+  const handleDeleteContact = async (contactId: string) => {
+    try {
+      const res = await fetch(`/api/contacts/${contactId}`, { method: 'DELETE' })
+      if (res.ok) {
+        loadCustomer()
+      }
+    } catch (error) {
+      console.error('Error deleting contact:', error)
+    }
+  }
+  
+  const handleEditComputer = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!editingComputer) return
+    
+    const formData = new FormData(e.currentTarget)
+    const data = Object.fromEntries(formData)
+    
+    try {
+      const res = await fetch(`/api/computers/${editingComputer.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      
+      if (res.ok) {
+        setEditingComputer(null)
+        loadCustomer()
+      }
+    } catch (error) {
+      console.error('Error editing computer:', error)
+    }
+  }
+  
+  const handleDeleteComputer = async (computerId: string) => {
+    try {
+      const res = await fetch(`/api/computers/${computerId}`, { method: 'DELETE' })
+      if (res.ok) {
+        loadCustomer()
+      }
+    } catch (error) {
+      console.error('Error deleting computer:', error)
     }
   }
   
@@ -425,7 +503,31 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                       <CardTitle className="text-base">
                         {contact.firstName} {contact.lastName}
                       </CardTitle>
-                      {contact.isPrimary && <Badge>Hauptkontakt</Badge>}
+                      <div className="flex items-center gap-2">
+                        {contact.isPrimary && <Badge>Hauptkontakt</Badge>}
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingContact(contact)}>
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Kontakt loeschen?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Moechten Sie {contact.firstName} {contact.lastName} wirklich loeschen?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteContact(contact.id)}>Loeschen</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
                     {contact.position && (
                       <CardDescription>{contact.position}</CardDescription>
@@ -455,6 +557,57 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               ))}
             </div>
           )}
+          
+          {/* Edit Contact Dialog */}
+          <Dialog open={!!editingContact} onOpenChange={(open) => !open && setEditingContact(null)}>
+            <DialogContent>
+              <form onSubmit={handleEditContact}>
+                <DialogHeader>
+                  <DialogTitle>Kontakt bearbeiten</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-contact-firstName">Vorname *</Label>
+                      <Input id="edit-contact-firstName" name="firstName" defaultValue={editingContact?.firstName} required />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-contact-lastName">Nachname *</Label>
+                      <Input id="edit-contact-lastName" name="lastName" defaultValue={editingContact?.lastName} required />
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-contact-position">Position</Label>
+                    <Input id="edit-contact-position" name="position" defaultValue={editingContact?.position || ''} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-contact-email">E-Mail</Label>
+                    <Input id="edit-contact-email" name="email" type="email" defaultValue={editingContact?.email || ''} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-contact-phone">Telefon</Label>
+                      <Input id="edit-contact-phone" name="phone" defaultValue={editingContact?.phone || ''} />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-contact-mobile">Mobil</Label>
+                      <Input id="edit-contact-mobile" name="mobile" defaultValue={editingContact?.mobile || ''} />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox id="edit-contact-isPrimary" name="isPrimary" defaultChecked={editingContact?.isPrimary} />
+                    <Label htmlFor="edit-contact-isPrimary">Hauptkontakt</Label>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setEditingContact(null)}>
+                    Abbrechen
+                  </Button>
+                  <Button type="submit">Speichern</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
         
         <TabsContent value="computers" className="space-y-4">
@@ -570,7 +723,31 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                         <Monitor className="h-4 w-4" />
                         {computer.name}
                       </CardTitle>
-                      {computer.type && <Badge variant="outline">{computer.type}</Badge>}
+                      <div className="flex items-center gap-2">
+                        {computer.type && <Badge variant="outline">{computer.type}</Badge>}
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingComputer(computer)}>
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Geraet loeschen?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Moechten Sie {computer.name} wirklich loeschen?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteComputer(computer.id)}>Loeschen</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
                     {computer.manufacturer && computer.model && (
                       <CardDescription>{computer.manufacturer} {computer.model}</CardDescription>
@@ -596,6 +773,65 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               ))}
             </div>
           )}
+          
+          {/* Edit Computer Dialog */}
+          <Dialog open={!!editingComputer} onOpenChange={(open) => !open && setEditingComputer(null)}>
+            <DialogContent className="max-w-2xl">
+              <form onSubmit={handleEditComputer}>
+                <DialogHeader>
+                  <DialogTitle>Geraet bearbeiten</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-pc-name">Name *</Label>
+                      <Input id="edit-pc-name" name="name" defaultValue={editingComputer?.name} required />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-pc-type">Typ</Label>
+                      <Select name="type" defaultValue={editingComputer?.type || ''}>
+                        <SelectTrigger id="edit-pc-type">
+                          <SelectValue placeholder="Typ waehlen" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Desktop">Desktop</SelectItem>
+                          <SelectItem value="Laptop">Laptop</SelectItem>
+                          <SelectItem value="Server">Server</SelectItem>
+                          <SelectItem value="Drucker">Drucker</SelectItem>
+                          <SelectItem value="Router">Router</SelectItem>
+                          <SelectItem value="Sonstiges">Sonstiges</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-pc-manufacturer">Hersteller</Label>
+                      <Input id="edit-pc-manufacturer" name="manufacturer" defaultValue={editingComputer?.manufacturer || ''} />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-pc-model">Modell</Label>
+                      <Input id="edit-pc-model" name="model" defaultValue={editingComputer?.model || ''} />
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-pc-operatingSystem">Betriebssystem</Label>
+                    <Input id="edit-pc-operatingSystem" name="operatingSystem" defaultValue={editingComputer?.operatingSystem || ''} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-pc-notes">Notizen</Label>
+                    <Textarea id="edit-pc-notes" name="notes" rows={3} defaultValue={editingComputer?.notes || ''} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setEditingComputer(null)}>
+                    Abbrechen
+                  </Button>
+                  <Button type="submit">Speichern</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
         
         <TabsContent value="tickets" className="space-y-4">
