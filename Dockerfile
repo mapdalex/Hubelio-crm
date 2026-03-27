@@ -69,17 +69,41 @@ COPY --chmod=755 <<EOF /app/start.sh
 #!/bin/sh
 set -e
 
-echo "Warte auf Datenbank..."
-sleep 5
+echo "============================================"
+echo "CRM System startet..."
+echo "============================================"
+echo ""
 
-echo "Fuehre Prisma db push aus..."
-npx prisma db push --accept-data-loss || {
-  echo "Prisma db push fehlgeschlagen, versuche es erneut..."
-  sleep 3
-  npx prisma db push --accept-data-loss
+echo "[1/4] Warte auf Datenbank (10 Sekunden)..."
+sleep 10
+
+echo ""
+echo "[2/4] Pruefe Datenbankverbindung..."
+echo "DATABASE_URL: \${DATABASE_URL:0:30}..."
+
+echo ""
+echo "[3/4] Fuehre Prisma db push aus..."
+npx prisma db push --accept-data-loss 2>&1 || {
+  echo ""
+  echo "WARNUNG: Prisma db push fehlgeschlagen, versuche es erneut in 5 Sekunden..."
+  sleep 5
+  npx prisma db push --accept-data-loss 2>&1 || {
+    echo ""
+    echo "FEHLER: Datenbankschema konnte nicht erstellt werden!"
+    echo "Bitte pruefen Sie die DATABASE_URL und Datenbankverbindung."
+    exit 1
+  }
 }
 
-echo "Starte Server..."
+echo ""
+echo "[4/4] Schema erfolgreich! Starte Server..."
+echo ""
+echo "============================================"
+echo "CRM System bereit auf Port 3000"
+echo "Oeffnen Sie /setup um den ersten Admin zu erstellen"
+echo "============================================"
+echo ""
+
 exec node server.js
 EOF
 
