@@ -37,7 +37,8 @@ export default function SetupPage() {
       const res = await fetch('/api/auth/setup')
       const data = await res.json()
       
-      if (data.isSetupComplete) {
+      // API gibt needsSetup zurueck - wenn false, ist Setup bereits abgeschlossen
+      if (!data.needsSetup) {
         router.push('/login')
       }
     } catch {
