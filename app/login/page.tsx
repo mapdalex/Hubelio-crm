@@ -63,6 +63,7 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        credentials: 'include', // Wichtig fuer Cookies
       })
       
       const data = await res.json()
@@ -72,8 +73,9 @@ export default function LoginPage() {
         return
       }
       
-      router.push('/dashboard')
-      router.refresh()
+      // Kurz warten damit Cookie gesetzt wird, dann hard redirect
+      await new Promise(resolve => setTimeout(resolve, 100))
+      window.location.href = '/dashboard'
     } catch {
       setError('Verbindungsfehler. Bitte versuchen Sie es erneut.')
     } finally {
