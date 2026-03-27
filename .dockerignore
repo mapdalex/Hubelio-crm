@@ -1,0 +1,46 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+.next
+out
+build
+dist
+
+# Development files
+.git
+.gitignore
+*.md
+README*
+LICENSE
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Environment (nicht in Build kopieren)
+.env
+.env.local
+.env.development
+.env.production
+
+# Docker files
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Tests
+__tests__
+*.test.*
+*.spec.*
+coverage
+
+# Misc
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
