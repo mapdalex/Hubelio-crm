@@ -15,17 +15,28 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || ''
     const sortBy = searchParams.get('sortBy') || 'customerNumber'
     const sortOrder = searchParams.get('sortOrder') || 'asc'
+    const isActiveParam = searchParams.get('isActive')
     
-    const where = search ? {
-      OR: [
-        { customerNumber: { contains: search, mode: 'insensitive' as const } },
-        { company: { contains: search, mode: 'insensitive' as const } },
-        { firstName: { contains: search, mode: 'insensitive' as const } },
-        { lastName: { contains: search, mode: 'insensitive' as const } },
-        { email: { contains: search, mode: 'insensitive' as const } },
-        { city: { contains: search, mode: 'insensitive' as const } },
-      ],
-    } : {}
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const where: any = {}
+    
+    // Status filter
+    if (isActiveParam !== null) {
+      where.isActive = isActiveParam === 'true'
+    }
+    
+    // Search filter
+    if (search) {
+      where.OR = [
+        { customerNumber: { contains: search, mode: 'insensitive' } },
+        { company: { contains: search, mode: 'insensitive' } },
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { city: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search, mode: 'insensitive' } },
+      ]
+    }
     
     const [customers, total] = await Promise.all([
       db.customer.findMany({

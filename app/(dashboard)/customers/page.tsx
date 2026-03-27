@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Building2, User, MoreHorizontal, Phone, Mail } from 'lucide-react'
+import { Plus, Search, Building2, User, MoreHorizontal, Phone, Mail, Filter, ArrowUpDown, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   Table,
@@ -20,6 +20,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu'
 import {
   Dialog,
@@ -30,6 +32,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Spinner } from '@/components/ui/spinner'
@@ -57,22 +66,36 @@ export default function CustomersPage() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [totalCustomers, setTotalCustomers] = useState(0)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active')
+  const [sortBy, setSortBy] = useState('customerNumber')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   
   const loadCustomers = useCallback(async () => {
     setIsLoading(true)
     try {
-      const res = await fetch(`/api/customers?page=${page}&search=${encodeURIComponent(search)}`)
+      const params = new URLSearchParams({
+        page: page.toString(),
+        search: search,
+        sortBy: sortBy,
+        sortOrder: sortOrder,
+      })
+      if (statusFilter !== 'all') {
+        params.append('isActive', statusFilter === 'active' ? 'true' : 'false')
+      }
+      const res = await fetch(`/api/customers?${params}`)
       const data = await res.json()
       setCustomers(data.customers || [])
       setTotalPages(data.pagination?.totalPages || 1)
+      setTotalCustomers(data.pagination?.total || 0)
     } catch (error) {
       console.error('Error loading customers:', error)
     } finally {
       setIsLoading(false)
     }
-  }, [page, search])
+  }, [page, search, statusFilter, sortBy, sortOrder])
   
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -203,7 +226,7 @@ export default function CustomersPage() {
       
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -215,6 +238,51 @@ export default function CustomersPage() {
                   setPage(1)
                 }}
               />
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={statusFilter} onValueChange={(v: 'all' | 'active' | 'inactive') => { setStatusFilter(v); setPage(1) }}>
+                <SelectTrigger className="w-[140px]">
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alle</SelectItem>
+                  <SelectItem value="active">Aktiv</SelectItem>
+                  <SelectItem value="inactive">Inaktiv</SelectItem>
+                </SelectContent>
+              </Select>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <ArrowUpDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Sortieren nach</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => { setSortBy('customerNumber'); setSortOrder('asc') }}>
+                    Kundennummer (aufst.)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setSortBy('customerNumber'); setSortOrder('desc') }}>
+                    Kundennummer (abst.)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setSortBy('lastName'); setSortOrder('asc') }}>
+                    Name (A-Z)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setSortBy('lastName'); setSortOrder('desc') }}>
+                    Name (Z-A)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setSortBy('createdAt'); setSortOrder('desc') }}>
+                    Neueste zuerst
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setSortBy('createdAt'); setSortOrder('asc') }}>
+                    Aelteste zuerst
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <span className="text-sm text-muted-foreground hidden sm:inline">
+                {totalCustomers} Kunden
+              </span>
             </div>
           </div>
         </CardHeader>
