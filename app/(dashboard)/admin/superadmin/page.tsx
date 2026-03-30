@@ -1404,7 +1404,7 @@ export default function SuperadminPage() {
       
       {/* Modules Configuration Dialog */}
       <Dialog open={showModulesDialog} onOpenChange={setShowModulesDialog}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
@@ -1415,100 +1415,108 @@ export default function SuperadminPage() {
             </DialogDescription>
           </DialogHeader>
 
-          {isLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : modules.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Keine Module verfuegbar
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {/* CORE Modul mit Plan-Auswahl */}
-              {modules.filter(m => m.moduleId === 'CORE').map((module) => {
-                const currentTier = getSubscriptionTier(module.moduleId)
-                return (
-                  <Card key={module.moduleId} className="p-4 border-primary bg-primary/5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold">{module.name}</h3>
-                          <Badge variant="default" className="text-xs">
-                            Basis-Modul
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{module.description}</p>
-                      </div>
-                      <div className="flex flex-col gap-2 items-end">
-                        <Label className="text-xs text-muted-foreground">Abo-Plan</Label>
-                        <select
-                          value={currentTier || 'FREE'}
-                          onChange={(e) => {
-                            handleModuleSubscription(module.moduleId, e.target.value)
-                          }}
-                          className="px-3 py-2 border rounded-lg text-sm min-w-[140px] bg-background"
-                        >
-                          <option value="FREE">Free (0 Module)</option>
-                          <option value="STARTER">Starter (1 Modul)</option>
-                          <option value="PRO">Pro (2 Module)</option>
-                          <option value="ENTERPRISE">Enterprise (3 Module)</option>
-                        </select>
-                      </div>
-                    </div>
-                  </Card>
-                )
-              })}
-              
-              {/* Trennlinie */}
-              <div className="border-t pt-4">
-                <h4 className="font-medium mb-3">Zusatzmodule</h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Als Superadmin koennen Sie beliebig viele Module aktivieren, unabhaengig vom Plan.
-                </p>
+          <div className="max-h-[60vh] overflow-y-auto pr-2">
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin" />
               </div>
-              
-              {/* Andere Module mit Checkbox */}
-              <div className="grid gap-3">
-                {modules.filter(m => m.moduleId !== 'CORE').map((module) => {
-                  const isActive = isModuleActive(module.moduleId)
+            ) : modules.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Keine Module verfuegbar
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* CORE Modul mit Plan-Auswahl */}
+                {modules.filter(m => m.moduleId === 'CORE').map((module) => {
+                  const currentTier = getSubscriptionTier(module.moduleId)
                   return (
-                    <Card 
-                      key={module.moduleId} 
-                      className={`p-4 cursor-pointer transition-colors ${isActive ? 'border-primary/50 bg-primary/5' : 'hover:border-muted-foreground/30'}`}
-                      onClick={() => handleToggleModule(module.moduleId, !isActive)}
-                    >
-                      <div className="flex items-center gap-4">
-                        <input
-                          type="checkbox"
-                          checked={isActive}
-                          onChange={(e) => {
-                            e.stopPropagation()
-                            handleToggleModule(module.moduleId, e.target.checked)
-                          }}
-                          className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
-                        />
+                    <Card key={module.moduleId} className="p-4 border-primary bg-primary/5">
+                      <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold">{module.name}</h3>
-                            {isActive && (
-                              <Badge variant="default" className="text-xs">
-                                Aktiv
-                              </Badge>
-                            )}
-                            <Badge variant="outline" className="text-xs">
-                              {module.status}
+                            <Badge variant="default" className="text-xs">
+                              Basis-Modul
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground">{module.description}</p>
+                        </div>
+                        <div className="flex flex-col gap-2 items-end relative z-50">
+                          <Label className="text-xs text-muted-foreground">Abo-Plan</Label>
+                          <select
+                            value={currentTier || 'FREE'}
+                            onChange={(e) => {
+                              console.log('[v0] Plan selected:', e.target.value)
+                              handleModuleSubscription(module.moduleId, e.target.value)
+                            }}
+                            className="px-3 py-2 border rounded-lg text-sm min-w-[160px] bg-background cursor-pointer"
+                          >
+                            <option value="FREE">Free (0 Module)</option>
+                            <option value="STARTER">Starter (1 Modul)</option>
+                            <option value="PRO">Pro (2 Module)</option>
+                            <option value="ENTERPRISE">Enterprise (3 Module)</option>
+                          </select>
                         </div>
                       </div>
                     </Card>
                   )
                 })}
+                
+                {/* Trennlinie */}
+                <div className="border-t pt-4">
+                  <h4 className="font-medium mb-3">Zusatzmodule</h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Als Superadmin koennen Sie beliebig viele Module aktivieren, unabhaengig vom Plan.
+                  </p>
+                </div>
+                
+                {/* Andere Module mit Checkbox */}
+                <div className="grid gap-3">
+                  {modules.filter(m => m.moduleId !== 'CORE').map((module) => {
+                    const isActive = isModuleActive(module.moduleId)
+                    return (
+                      <Card 
+                        key={module.moduleId} 
+                        className={`p-4 transition-colors ${isActive ? 'border-primary/50 bg-primary/5' : 'hover:border-muted-foreground/30'}`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <input
+                            type="checkbox"
+                            checked={isActive}
+                            onChange={(e) => {
+                              console.log('[v0] Checkbox changed:', module.moduleId, e.target.checked)
+                              handleToggleModule(module.moduleId, e.target.checked)
+                            }}
+                            className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                          />
+                          <label 
+                            className="flex-1 cursor-pointer"
+                            onClick={() => {
+                              console.log('[v0] Label clicked:', module.moduleId, !isActive)
+                              handleToggleModule(module.moduleId, !isActive)
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold">{module.name}</h3>
+                              {isActive && (
+                                <Badge variant="default" className="text-xs">
+                                  Aktiv
+                                </Badge>
+                              )}
+                              <Badge variant="outline" className="text-xs">
+                                {module.status}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{module.description}</p>
+                          </label>
+                        </div>
+                      </Card>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           <DialogFooter>
             <Button
