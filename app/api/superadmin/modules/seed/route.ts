@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getSession, isSuperAdmin } from '@/lib/auth'
+import { getSession } from '@/lib/auth'
 
 // POST /api/superadmin/modules/seed - Initialisiert alle Module in der Datenbank
 export async function POST() {
@@ -11,8 +11,8 @@ export async function POST() {
       return NextResponse.json({ error: 'Nicht eingeloggt' }, { status: 401 })
     }
     
-    const superAdmin = await isSuperAdmin(session.userId)
-    if (!superAdmin) {
+    // Pruefe ob der Benutzer SUPERADMIN ist (session.role enthaelt die Rolle)
+    if (session.role !== 'SUPERADMIN') {
       return NextResponse.json({ error: 'Keine Berechtigung' }, { status: 403 })
     }
 
