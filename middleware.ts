@@ -66,7 +66,7 @@ export async function middleware(request: NextRequest) {
   
   // Admin-Routen pruefen
   if (adminRoutes.some(route => path.startsWith(route))) {
-    if (session.role !== 'ADMIN') {
+    if (session.role !== 'ADMIN' && session.role !== 'SUPERADMIN') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }
