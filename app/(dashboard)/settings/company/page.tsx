@@ -669,8 +669,7 @@ export default function CompanySettingsPage() {
                 </CardContent>
               </Card>
             )}
-          </TabsContent>
-        )}
+        </TabsContent>
       </Tabs>
 
       <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
