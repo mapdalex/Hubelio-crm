@@ -150,12 +150,16 @@ export function canAccess(userRole: Role, requiredRoles: Role[]): boolean {
   return requiredRoles.includes(userRole)
 }
 
+export function isSuperAdmin(role: Role): boolean {
+  return role === 'SUPERADMIN'
+}
+
 export function isAdmin(role: Role): boolean {
-  return role === 'ADMIN'
+  return role === 'ADMIN' || role === 'SUPERADMIN'
 }
 
 export function isEmployee(role: Role): boolean {
-  return role === 'ADMIN' || role === 'MITARBEITER'
+  return role === 'ADMIN' || role === 'MITARBEITER' || role === 'SUPERADMIN'
 }
 
 export function isCustomer(role: Role): boolean {

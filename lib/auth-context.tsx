@@ -32,14 +32,17 @@ type AuthContextType = {
   companyRole: CompanyRole | null
   companies: CompanyMembership[]
   accessibleModules: ModuleId[]
+  // Convenience getter for companyId
+  companyId: string | null
   // Actions
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
   refresh: () => Promise<void>
   switchCompany: (companyId: string) => Promise<{ success: boolean; error?: string }>
-  // Module access checks
+  // Permission checks
   hasModuleAccess: (moduleId: ModuleId) => boolean
   canManageCompany: () => boolean
+  isSuperAdmin: () => boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -155,6 +158,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return companyRole === 'OWNER' || companyRole === 'ADMIN'
   }
   
+  const isSuperAdmin = (): boolean => {
+    return user?.role === 'SUPERADMIN'
+  }
+  
   return (
     <AuthContext.Provider
       value={{
@@ -164,12 +171,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         companyRole,
         companies,
         accessibleModules,
+        companyId: currentCompany?.id || null,
         login,
         logout,
         refresh,
         switchCompany,
         hasModuleAccess,
         canManageCompany,
+        isSuperAdmin,
       }}
     >
       {children}

@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/auth'
+import { getSession, hashPassword } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { CompanyRole, ModuleId } from '@prisma/client'
 
 type RouteParams = { params: Promise<{ id: string }> }
+
+// Rollen-Hierarchie fuer Berechtigungspruefung
+const ROLE_HIERARCHY = ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER', 'VIEWER']
+
+// Welche Rollen kann welche Rolle vergeben?
+const ASSIGNABLE_ROLES: Record<string, string[]> = {
+  OWNER: ['ADMIN', 'MANAGER', 'MEMBER', 'VIEWER'],
+  ADMIN: ['MANAGER', 'MEMBER', 'VIEWER'],
+  MANAGER: ['MEMBER', 'VIEWER'],
+}
 
 // GET /api/companies/[id]/users - Get company users
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -61,7 +71,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// POST /api/companies/[id]/users - Add user to company
+// POST /api/companies/[id]/users - Add user to company (create new or add existing)
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getSession()
@@ -89,14 +99,67 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
     
-    const { userId, email, role, modulePermissions } = await request.json()
+    const { 
+      userId, 
+      email, 
+      role, 
+      modulePermissions,
+      // Fuer neuen Benutzer
+      createNewUser,
+      name,
+      password,
+    } = await request.json()
+    
+    // Pruefe ob die Rolle vergeben werden darf
+    const requestedRole = role || 'MEMBER'
+    const allowedRoles = ASSIGNABLE_ROLES[companyUser.role] || []
+    
+    if (!allowedRoles.includes(requestedRole)) {
+      return NextResponse.json(
+        { error: `Sie koennen keine ${requestedRole}-Rolle vergeben` },
+        { status: 403 }
+      )
+    }
     
     let targetUserId = userId
     
-    // If email provided instead of userId, find user
-    if (!targetUserId && email) {
+    // Neuen Benutzer erstellen
+    if (createNewUser && email && name && password) {
+      // Pruefe ob E-Mail bereits existiert
+      const existingUser = await db.user.findUnique({
+        where: { email: email.toLowerCase() },
+      })
+      
+      if (existingUser) {
+        return NextResponse.json(
+          { error: 'E-Mail Adresse bereits vergeben' },
+          { status: 400 }
+        )
+      }
+      
+      if (password.length < 8) {
+        return NextResponse.json(
+          { error: 'Passwort muss mindestens 8 Zeichen lang sein' },
+          { status: 400 }
+        )
+      }
+      
+      const hashedPassword = await hashPassword(password)
+      
+      const newUser = await db.user.create({
+        data: {
+          email: email.toLowerCase(),
+          password: hashedPassword,
+          name,
+          role: 'GAST', // Basis-Systemrolle, Firmenrolle bestimmt Berechtigungen
+        },
+      })
+      
+      targetUserId = newUser.id
+    } else if (!targetUserId && email) {
+      // Existierenden Benutzer suchen
       const user = await db.user.findUnique({
-        where: { email },
+        where: { email: email.toLowerCase() },
       })
       
       if (!user) {
@@ -111,7 +174,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     
     if (!targetUserId) {
       return NextResponse.json(
-        { error: 'Benutzer ID oder E-Mail erforderlich' },
+        { error: 'Benutzer-Daten erforderlich' },
         { status: 400 }
       )
     }
@@ -130,24 +193,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
     
-    // Cannot add user with higher role than self
-    const roleHierarchy = ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER', 'VIEWER']
-    const selfRoleIndex = roleHierarchy.indexOf(companyUser.role)
-    const newRoleIndex = roleHierarchy.indexOf(role || 'MEMBER')
-    
-    if (newRoleIndex < selfRoleIndex) {
-      return NextResponse.json(
-        { error: 'Kann keinen Benutzer mit höherer Rolle hinzufügen' },
-        { status: 403 }
-      )
-    }
-    
     // Add user to company
     const newCompanyUser = await db.companyUser.create({
       data: {
         userId: targetUserId,
         companyId: id,
-        role: (role as CompanyRole) || CompanyRole.MEMBER,
+        role: requestedRole as CompanyRole,
+        isDefault: true, // Erste Firma wird Default
       },
       include: {
         user: {
@@ -171,11 +223,23 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
     }
     
+    // Aktivitaetslog
+    await db.activityLog.create({
+      data: {
+        userId: session.userId,
+        companyId: id,
+        action: 'CREATE',
+        entity: 'CompanyUser',
+        entityId: newCompanyUser.id,
+        details: `Benutzer ${newCompanyUser.user.email} zur Firma hinzugefuegt (Rolle: ${requestedRole})`,
+      },
+    })
+    
     return NextResponse.json({ companyUser: newCompanyUser })
   } catch (error) {
     console.error('Add company user error:', error)
     return NextResponse.json(
-      { error: 'Fehler beim Hinzufügen des Benutzers' },
+      { error: 'Fehler beim Hinzufuegen des Benutzers' },
       { status: 500 }
     )
   }
