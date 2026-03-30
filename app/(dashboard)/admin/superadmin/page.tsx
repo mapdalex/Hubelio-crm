@@ -365,6 +365,39 @@ export default function SuperadminPage() {
     )
   }
 
+  const [upgradeStatus, setUpgradeStatus] = useState<'checking' | 'available' | 'unavailable'>('checking')
+  const [isUpgrading, setIsUpgrading] = useState(false)
+
+  useEffect(() => {
+    if (user?.role !== 'SUPERADMIN') {
+      // Pruefe ob Upgrade moeglich ist
+      fetch('/api/setup/upgrade-to-superadmin')
+        .then(res => res.json())
+        .then(data => {
+          setUpgradeStatus(data.hasSuperadmin ? 'unavailable' : 'available')
+        })
+        .catch(() => setUpgradeStatus('unavailable'))
+    }
+  }, [user?.role])
+
+  const handleUpgrade = async () => {
+    setIsUpgrading(true)
+    try {
+      const res = await fetch('/api/setup/upgrade-to-superadmin', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) {
+        alert(data.message)
+        window.location.reload()
+      } else {
+        alert(data.error)
+      }
+    } catch {
+      alert('Fehler beim Upgrade')
+    } finally {
+      setIsUpgrading(false)
+    }
+  }
+
   if (user?.role !== 'SUPERADMIN') {
     return (
       <div className="flex items-center justify-center h-[60vh]">
@@ -378,6 +411,31 @@ export default function SuperadminPage() {
               Diese Seite ist nur fuer den Superadmin zugaenglich.
             </CardDescription>
           </CardHeader>
+          {upgradeStatus === 'available' && (
+            <CardContent>
+              <div className="p-3 bg-amber-50 text-amber-700 rounded-lg mb-4 text-sm">
+                <p className="font-medium">Kein Superadmin vorhanden</p>
+                <p>Sie koennen sich selbst zum Superadmin machen.</p>
+              </div>
+              <Button 
+                onClick={handleUpgrade} 
+                disabled={isUpgrading}
+                className="w-full"
+              >
+                {isUpgrading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Wird aktualisiert...
+                  </>
+                ) : (
+                  <>
+                    <Crown className="mr-2 h-4 w-4" />
+                    Mich zum Superadmin machen
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          )}
         </Card>
       </div>
     )
