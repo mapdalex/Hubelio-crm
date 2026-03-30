@@ -220,8 +220,6 @@ export function AppSidebar() {
   const isSuperAdmin = user?.role === 'SUPERADMIN'
   const isEmployee = ['ADMIN', 'MITARBEITER', 'BUCHHALTUNG'].includes(user?.role || '')
   
-  console.log('[v0] Sidebar user role:', user?.role, 'isSuperAdmin:', isSuperAdmin)
-  
   // Get module-aware navigation
   const visibleNavItems = getModuleNavItems(accessibleModules as ModuleId[])
   
@@ -244,8 +242,8 @@ export function AppSidebar() {
           <span className="font-semibold">Hublio CRM</span>
         </Link>
         
-        {/* Company Selector */}
-        {companyId && <CompanySelector />}
+        {/* Company Selector - immer anzeigen, damit Firma erstellt werden kann */}
+        <CompanySelector />
       </SidebarHeader>
       
       <SidebarContent>
