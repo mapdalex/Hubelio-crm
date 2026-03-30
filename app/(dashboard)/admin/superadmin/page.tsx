@@ -114,6 +114,11 @@ export default function SuperadminPage() {
     adminPassword: '',
   })
   
+  const [showAddOwnerDialog, setShowAddOwnerDialog] = useState(false)
+  const [selectedCompanyForOwner, setSelectedCompanyForOwner] = useState<Company | null>(null)
+  const [newOwnerEmail, setNewOwnerEmail] = useState('')
+  const [isAddingOwner, setIsAddingOwner] = useState(false)
+  
   const [editFormData, setEditFormData] = useState({
     name: '',
     email: '',
@@ -253,6 +258,41 @@ export default function SuperadminPage() {
       console.error('Error toggling company status:', err)
     }
   }
+  
+  const handleAddOwner = async () => {
+    if (!selectedCompanyForOwner || !newOwnerEmail.trim()) return
+    
+    setIsAddingOwner(true)
+    setError('')
+    
+    try {
+      const res = await fetch(`/api/superadmin/companies/${selectedCompanyForOwner.id}/add-owner`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: newOwnerEmail }),
+      })
+      
+      const data = await res.json()
+      
+      if (!res.ok) {
+        setError(data.error || 'Fehler beim Hinzufuegen')
+        return
+      }
+      
+      setShowAddOwnerDialog(false)
+      setNewOwnerEmail('')
+      setSelectedCompanyForOwner(null)
+      loadData()
+    } catch (err) {
+      setError('Verbindungsfehler')
+    } finally {
+      setIsAddingOwner(false)
+    }
+  }
+  
+  const getOwnerCount = (company: Company) => {
+    return company.companyUsers.filter(cu => cu.role === 'OWNER').length
+  }
 
   const getInitials = (name: string) => {
     return name
@@ -320,7 +360,7 @@ export default function SuperadminPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Firmen</CardTitle>
@@ -348,6 +388,18 @@ export default function SuperadminPage() {
             <div className="text-2xl font-bold">
               {users.filter(u => u.role === 'ADMIN').length}
             </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Eigentuemer</CardTitle>
+            <Crown className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {companies.reduce((acc, c) => acc + c.companyUsers.filter(cu => cu.role === 'OWNER').length, 0)}
+            </div>
+            <p className="text-xs text-muted-foreground">max. 2 pro Firma</p>
           </CardContent>
         </Card>
       </div>
@@ -386,7 +438,7 @@ export default function SuperadminPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Firma</TableHead>
-                      <TableHead>Owner/Admins</TableHead>
+                      <TableHead>Eigentuemer/Admins</TableHead>
                       <TableHead>Benutzer</TableHead>
                       <TableHead>Kunden</TableHead>
                       <TableHead>Status</TableHead>
@@ -407,26 +459,39 @@ export default function SuperadminPage() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            {company.companyUsers
-                              .filter(cu => ['OWNER', 'ADMIN'].includes(cu.role))
-                              .slice(0, 2)
-                              .map(cu => (
-                                <div key={cu.id} className="flex items-center gap-2 text-sm">
-                                  <Avatar className="h-6 w-6">
-                                    <AvatarFallback className="text-xs">
-                                      {getInitials(cu.user.name)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span>{cu.user.name}</span>
-                                  <Badge variant="outline" className="text-xs">
-                                    {cu.role}
-                                  </Badge>
-                                </div>
-                              ))}
-                          </div>
-                        </TableCell>
+<TableCell>
+                                          <div className="space-y-1">
+                                            <div className="flex items-center gap-2 mb-2">
+                                              <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+                                                <Crown className="mr-1 h-3 w-3" />
+                                                {getOwnerCount(company)}/2 Owner
+                                              </Badge>
+                                            </div>
+                                            {company.companyUsers
+                                              .filter(cu => ['OWNER', 'ADMIN'].includes(cu.role))
+                                              .slice(0, 2)
+                                              .map(cu => (
+                                                <div key={cu.id} className="flex items-center gap-2 text-sm">
+                                                  <Avatar className="h-6 w-6">
+                                                    <AvatarFallback className="text-xs">
+                                                      {getInitials(cu.user.name)}
+                                                    </AvatarFallback>
+                                                  </Avatar>
+                                                  <span>{cu.user.name}</span>
+                                                  <Badge 
+                                                    variant="outline" 
+                                                    className={cu.role === 'OWNER' 
+                                                      ? 'text-xs bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' 
+                                                      : 'text-xs'
+                                                    }
+                                                  >
+                                                    {cu.role === 'OWNER' && <Crown className="mr-1 h-3 w-3" />}
+                                                    {cu.role === 'OWNER' ? 'Eigentuemer' : cu.role}
+                                                  </Badge>
+                                                </div>
+                                              ))}
+                                          </div>
+                                        </TableCell>
                         <TableCell>{company._count.companyUsers}</TableCell>
                         <TableCell>{company._count.customers}</TableCell>
                         <TableCell>
@@ -441,24 +506,36 @@ export default function SuperadminPage() {
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEditCompany(company)}>
-                                Bearbeiten
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => handleToggleCompanyStatus(company)}
-                                className={company.isActive ? 'text-destructive' : 'text-green-600'}
-                              >
-                                {company.isActive ? (
-                                  <>
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Deaktivieren
-                                  </>
-                                ) : (
-                                  'Aktivieren'
-                                )}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
+<DropdownMenuContent align="end">
+                                              <DropdownMenuItem onClick={() => handleEditCompany(company)}>
+                                                Bearbeiten
+                                              </DropdownMenuItem>
+                                              {getOwnerCount(company) < 2 && (
+                                                <DropdownMenuItem 
+                                                  onClick={() => {
+                                                    setSelectedCompanyForOwner(company)
+                                                    setShowAddOwnerDialog(true)
+                                                    setError('')
+                                                  }}
+                                                >
+                                                  <Crown className="mr-2 h-4 w-4" />
+                                                  Eigentuemer hinzufuegen
+                                                </DropdownMenuItem>
+                                              )}
+                                              <DropdownMenuItem 
+                                                onClick={() => handleToggleCompanyStatus(company)}
+                                                className={company.isActive ? 'text-destructive' : 'text-green-600'}
+                                              >
+                                                {company.isActive ? (
+                                                  <>
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    Deaktivieren
+                                                  </>
+                                                ) : (
+                                                  'Aktivieren'
+                                                )}
+                                              </DropdownMenuItem>
+                                            </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
                       </TableRow>
@@ -852,6 +929,96 @@ export default function SuperadminPage() {
                 </>
               ) : (
                 'Speichern'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Add Owner Dialog */}
+      <Dialog open={showAddOwnerDialog} onOpenChange={(open) => {
+        setShowAddOwnerDialog(open)
+        if (!open) {
+          setSelectedCompanyForOwner(null)
+          setNewOwnerEmail('')
+          setError('')
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-amber-500" />
+              Eigentuemer hinzufuegen
+            </DialogTitle>
+            <DialogDescription>
+              Fuegen Sie einen weiteren Eigentuemer zu {selectedCompanyForOwner?.name} hinzu.
+              <br />
+              <span className="text-amber-600 font-medium">
+                Maximal 2 Eigentuemer pro Firma erlaubt.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          
+          {error && (
+            <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="ownerEmail">E-Mail des Benutzers *</Label>
+              <Input
+                id="ownerEmail"
+                type="email"
+                value={newOwnerEmail}
+                onChange={(e) => setNewOwnerEmail(e.target.value)}
+                placeholder="benutzer@beispiel.de"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Der Benutzer muss bereits im System existieren.
+              </p>
+            </div>
+            
+            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+              <div className="flex items-start gap-2">
+                <Crown className="h-4 w-4 text-amber-600 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-800 dark:text-amber-400">
+                    Eigentuemer-Berechtigungen
+                  </p>
+                  <ul className="text-amber-700 dark:text-amber-500 mt-1 list-disc list-inside">
+                    <li>Kann die Firma permanent loeschen</li>
+                    <li>Hat alle Admin-Rechte</li>
+                    <li>Kann andere Eigentuemer ernennen</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowAddOwnerDialog(false)}
+            >
+              Abbrechen
+            </Button>
+            <Button 
+              onClick={handleAddOwner}
+              disabled={isAddingOwner || !newOwnerEmail.trim()}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              {isAddingOwner ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Wird hinzugefuegt...
+                </>
+              ) : (
+                <>
+                  <Crown className="mr-2 h-4 w-4" />
+                  Als Eigentuemer hinzufuegen
+                </>
               )}
             </Button>
           </DialogFooter>

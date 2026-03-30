@@ -32,7 +32,19 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useAuth } from '@/lib/auth-context'
-import { Save, Building2, Users, Settings, UserPlus, Loader2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { Save, Building2, Users, Settings, UserPlus, Loader2, Trash2, AlertTriangle, Crown } from 'lucide-react'
 
 type CompanyUser = {
   id: string
@@ -57,7 +69,8 @@ const roleLabels: Record<string, string> = {
 }
 
 export default function CompanySettingsPage() {
-  const { currentCompany, companyRole, canManageCompany } = useAuth()
+  const { currentCompany, companyRole, canManageCompany, logout } = useAuth()
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [users, setUsers] = useState<CompanyUser[]>([])
@@ -66,6 +79,11 @@ export default function CompanySettingsPage() {
   const [newUserEmail, setNewUserEmail] = useState('')
   const [newUserRole, setNewUserRole] = useState('MEMBER')
   const [isAddingUser, setIsAddingUser] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState('')
+  
+  const isOwner = companyRole === 'OWNER'
+  const ownerCount = users.filter(u => u.role === 'OWNER').length
 
   const [formData, setFormData] = useState({
     name: '',
@@ -174,6 +192,31 @@ export default function CompanySettingsPage() {
       setIsAddingUser(false)
     }
   }
+  
+  const handleDeleteCompany = async () => {
+    if (!currentCompany || deleteConfirmation !== currentCompany.name) return
+    
+    setIsDeleting(true)
+    try {
+      const res = await fetch(`/api/companies/${currentCompany.id}`, {
+        method: 'DELETE',
+      })
+      
+      if (res.ok) {
+        // Nach dem Loeschen ausloggen und zur Login-Seite weiterleiten
+        await logout()
+        router.push('/login')
+      } else {
+        const data = await res.json()
+        setMessage({ type: 'error', text: data.error || 'Fehler beim Loeschen' })
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Fehler beim Loeschen der Firma' })
+    } finally {
+      setIsDeleting(false)
+      setDeleteConfirmation('')
+    }
+  }
 
   if (!currentCompany) {
     return (
@@ -237,6 +280,12 @@ export default function CompanySettingsPage() {
             <Users className="mr-2 h-4 w-4" />
             Benutzer
           </TabsTrigger>
+          {isOwner && (
+            <TabsTrigger value="danger">
+              <AlertTriangle className="mr-2 h-4 w-4" />
+              Gefahrenzone
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="general" className="space-y-4">
@@ -361,10 +410,19 @@ export default function CompanySettingsPage() {
                 Ihre aktuelle Rolle in dieser Firma
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Badge variant="secondary" className="text-base">
-                {roleLabels[companyRole || ''] || companyRole}
-              </Badge>
+            <CardContent className="space-y-2">
+              <div className="flex items-center gap-2">
+                {companyRole === 'OWNER' && <Crown className="h-4 w-4 text-amber-500" />}
+                <Badge variant="secondary" className="text-base">
+                  {roleLabels[companyRole || ''] || companyRole}
+                </Badge>
+              </div>
+              {companyRole === 'OWNER' && (
+                <p className="text-sm text-muted-foreground">
+                  Als Eigentuemer koennen Sie diese Firma loeschen. 
+                  Es gibt derzeit {ownerCount} Eigentuemer (max. 2 erlaubt).
+                </p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -405,8 +463,15 @@ export default function CompanySettingsPage() {
                         {cu.user.name}
                       </TableCell>
                       <TableCell>{cu.user.email}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
+<TableCell>
+                        <Badge 
+                          variant="outline"
+                          className={cu.role === 'OWNER' 
+                            ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' 
+                            : ''
+                          }
+                        >
+                          {cu.role === 'OWNER' && <Crown className="mr-1 h-3 w-3" />}
                           {roleLabels[cu.role] || cu.role}
                         </Badge>
                       </TableCell>
@@ -427,6 +492,90 @@ export default function CompanySettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+        
+        {isOwner && (
+          <TabsContent value="danger" className="space-y-4">
+            <Card className="border-destructive">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                  Firma loeschen
+                </CardTitle>
+                <CardDescription>
+                  Diese Aktion kann nicht rueckgaengig gemacht werden. Alle Daten der Firma 
+                  (Kunden, Tickets, Dateien, Benutzer-Zuordnungen) werden permanent geloescht.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-lg bg-destructive/10 p-4">
+                  <p className="text-sm font-medium text-destructive">
+                    Warnung: Diese Aktion ist unwiderruflich!
+                  </p>
+                  <ul className="mt-2 text-sm text-destructive/80 list-disc list-inside">
+                    <li>Alle Kundendaten werden geloescht</li>
+                    <li>Alle Tickets und Kommentare werden geloescht</li>
+                    <li>Alle Dateien werden geloescht</li>
+                    <li>Alle Benutzer werden aus der Firma entfernt</li>
+                  </ul>
+                </div>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-full">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Firma unwiderruflich loeschen
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5 text-destructive" />
+                        Firma wirklich loeschen?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="space-y-4">
+                        <p>
+                          Sie sind dabei, die Firma <strong>{currentCompany?.name}</strong> permanent zu loeschen. 
+                          Alle Daten werden unwiderruflich entfernt.
+                        </p>
+                        <div className="space-y-2">
+                          <Label htmlFor="delete-confirm" className="text-foreground">
+                            Geben Sie zur Bestaetigung den Firmennamen ein:
+                          </Label>
+                          <Input
+                            id="delete-confirm"
+                            placeholder={currentCompany?.name}
+                            value={deleteConfirmation}
+                            onChange={(e) => setDeleteConfirmation(e.target.value)}
+                            className="border-destructive"
+                          />
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel onClick={() => setDeleteConfirmation('')}>
+                        Abbrechen
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDeleteCompany}
+                        disabled={isDeleting || deleteConfirmation !== currentCompany?.name}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {isDeleting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Wird geloescht...
+                          </>
+                        ) : (
+                          'Firma endgueltig loeschen'
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
 
       <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
@@ -455,6 +604,9 @@ export default function CompanySettingsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  {isOwner && ownerCount < 2 && (
+                    <SelectItem value="OWNER">Eigentuemer</SelectItem>
+                  )}
                   <SelectItem value="ADMIN">Administrator</SelectItem>
                   <SelectItem value="MANAGER">Manager</SelectItem>
                   <SelectItem value="MEMBER">Mitglied</SelectItem>

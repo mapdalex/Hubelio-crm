@@ -10,10 +10,13 @@ const ROLE_HIERARCHY = ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER', 'VIEWER']
 
 // Welche Rollen kann welche Rolle vergeben?
 const ASSIGNABLE_ROLES: Record<string, string[]> = {
-  OWNER: ['ADMIN', 'MANAGER', 'MEMBER', 'VIEWER'],
+  OWNER: ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER', 'VIEWER'], // Owner kann auch Owner vergeben
   ADMIN: ['MANAGER', 'MEMBER', 'VIEWER'],
   MANAGER: ['MEMBER', 'VIEWER'],
 }
+
+// Maximale Anzahl von Ownern pro Firma
+const MAX_OWNERS_PER_COMPANY = 2
 
 // GET /api/companies/[id]/users - Get company users
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -119,6 +122,23 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { error: `Sie koennen keine ${requestedRole}-Rolle vergeben` },
         { status: 403 }
       )
+    }
+    
+    // Pruefe Owner-Limit (max 2 Owner pro Firma)
+    if (requestedRole === 'OWNER') {
+      const ownerCount = await db.companyUser.count({
+        where: { 
+          companyId: id,
+          role: 'OWNER',
+        },
+      })
+      
+      if (ownerCount >= MAX_OWNERS_PER_COMPANY) {
+        return NextResponse.json(
+          { error: `Maximal ${MAX_OWNERS_PER_COMPANY} Eigentuemer pro Firma erlaubt` },
+          { status: 400 }
+        )
+      }
     }
     
     let targetUserId = userId
