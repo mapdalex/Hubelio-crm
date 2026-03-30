@@ -14,8 +14,15 @@ export async function GET(
     
     const { id } = await params
     
-    const customer = await db.customer.findUnique({
-      where: { id },
+    // Multi-tenant: Nur Kunden der eigenen Firma abrufen
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const whereClause: any = { id }
+    if (session.role !== 'SUPERADMIN' && session.companyId) {
+      whereClause.companyId = session.companyId
+    }
+    
+    const customer = await db.customer.findFirst({
+      where: whereClause,
       include: {
         contacts: { orderBy: { isPrimary: 'desc' } },
         computers: { orderBy: { name: 'asc' } },
@@ -53,6 +60,16 @@ export async function PATCH(
     
     const { id } = await params
     const data = await request.json()
+    
+    // Multi-tenant: Pruefen ob Kunde zur eigenen Firma gehoert
+    if (session.role !== 'SUPERADMIN' && session.companyId) {
+      const existingCustomer = await db.customer.findFirst({
+        where: { id, companyId: session.companyId }
+      })
+      if (!existingCustomer) {
+        return NextResponse.json({ error: 'Kunde nicht gefunden' }, { status: 404 })
+      }
+    }
     
     const customer = await db.customer.update({
       where: { id },
@@ -95,13 +112,20 @@ export async function DELETE(
 ) {
   try {
     const session = await getSession()
-    if (!session || session.role !== 'ADMIN') {
+    if (!session || (session.role !== 'ADMIN' && session.role !== 'SUPERADMIN')) {
       return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
     
     const { id } = await params
     
-    const customer = await db.customer.findUnique({ where: { id } })
+    // Multi-tenant: Pruefen ob Kunde zur eigenen Firma gehoert
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const whereClause: any = { id }
+    if (session.role !== 'SUPERADMIN' && session.companyId) {
+      whereClause.companyId = session.companyId
+    }
+    
+    const customer = await db.customer.findFirst({ where: whereClause })
     if (!customer) {
       return NextResponse.json({ error: 'Kunde nicht gefunden' }, { status: 404 })
     }
