@@ -74,14 +74,14 @@ const getModuleNavItems = (accessibleModules: ModuleId[]): NavItem[] => {
       module: 'CORE',
     },
     {
-      title: 'Kunden',
+      title: 'Core',
       url: '/customers',
       icon: Users,
       module: 'CORE',
       items: [
-        { title: 'Alle Kunden', url: '/customers', icon: Users, module: 'CORE' },
+        { title: 'Kunden', url: '/customers', icon: Users, module: 'CORE' },
         { title: 'Kontakte', url: '/customers/contacts', icon: User, module: 'CORE' },
-        { title: 'PCs & Geraete', url: '/customers/computers', icon: Building2, module: 'CORE' },
+        { title: 'Todos', url: '/todos', icon: CheckSquare, module: 'CORE' },
       ],
     },
     {
@@ -153,12 +153,6 @@ const getModuleNavItems = (accessibleModules: ModuleId[]): NavItem[] => {
         { title: 'Reports', url: '/analytics/reports', icon: BarChart3, module: 'ANALYTICS' },
         { title: 'Daten Export', url: '/analytics/export', icon: BarChart3, module: 'ANALYTICS' },
       ],
-    },
-    {
-      title: 'Todos',
-      url: '/todos',
-      icon: CheckSquare,
-      module: 'CORE',
     },
     {
       title: 'Datenablage',
