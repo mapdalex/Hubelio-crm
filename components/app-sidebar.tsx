@@ -22,6 +22,7 @@ import {
   Lock,
   Monitor,
   Globe,
+  Shield,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -194,6 +195,15 @@ const adminNavItems: NavItem[] = [
   },
 ]
 
+// Superadmin-only navigation
+const superadminNavItems: NavItem[] = [
+  {
+    title: 'Superadmin',
+    url: '/admin/superadmin',
+    icon: Shield,
+  },
+]
+
 export function AppSidebar() {
   const pathname = usePathname()
   const { user, logout, companyId, accessibleModules = [] } = useAuth()
@@ -212,7 +222,8 @@ export function AppSidebar() {
       .slice(0, 2)
   }
   
-  const isAdmin = user?.role === 'ADMIN'
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPERADMIN'
+  const isSuperAdmin = user?.role === 'SUPERADMIN'
   const isEmployee = ['ADMIN', 'MITARBEITER', 'BUCHHALTUNG'].includes(user?.role || '')
   
   // Get module-aware navigation
@@ -291,6 +302,26 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        
+        {isSuperAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Superadmin</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {superadminNavItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                      <Link href={item.url}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
         
         {isAdmin && (
           <SidebarGroup>

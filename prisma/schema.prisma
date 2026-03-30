@@ -15,6 +15,7 @@ datasource db {
 // ============================================
 
 enum Role {
+  SUPERADMIN  // System-weiter Superadmin - kann Firmen und deren Admins erstellen
   ADMIN
   MITARBEITER
   KUNDE

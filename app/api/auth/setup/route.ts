@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { hashPassword } from '@/lib/auth'
+import { generateUniqueSlug } from '@/lib/multi-tenant'
 
-// Diese Route erstellt den ersten Admin-Benutzer
+// Diese Route erstellt den ersten SUPERADMIN-Benutzer
 // Nur verfügbar wenn noch keine Benutzer existieren
+// Der SUPERADMIN kann Firmen und deren Admins erstellen
 export async function POST(request: NextRequest) {
   try {
     // Pruefen ob bereits Benutzer existieren
@@ -33,43 +35,94 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Admin-Benutzer erstellen
+    // SUPERADMIN-Benutzer erstellen (erster Benutzer wird zum Superadmin)
     const hashedPassword = await hashPassword(password)
     
-    const user = await db.user.create({
-      data: {
-        email: email.toLowerCase(),
-        password: hashedPassword,
-        name,
-        role: 'ADMIN',
-      },
-    })
-    
-    // System-Einstellungen initialisieren
-    await db.systemSettings.upsert({
-      where: { id: 'system' },
-      update: {
-        companyName: companyName || 'Mein Unternehmen',
-        companyEmail: companyEmail || null,
-        companyPhone: companyPhone || null,
-      },
-      create: {
-        id: 'system',
-        companyName: companyName || 'Mein Unternehmen',
-        companyEmail: companyEmail || null,
-        companyPhone: companyPhone || null,
-      },
+    const result = await db.$transaction(async (tx) => {
+      // Superadmin erstellen
+      const user = await tx.user.create({
+        data: {
+          email: email.toLowerCase(),
+          password: hashedPassword,
+          name,
+          role: 'SUPERADMIN', // Erster Benutzer wird SUPERADMIN
+        },
+      })
+      
+      // Wenn Firmenname angegeben, Firma erstellen und Superadmin als Owner hinzufuegen
+      let company = null
+      if (companyName) {
+        const slug = await generateUniqueSlug(companyName)
+        
+        company = await tx.company.create({
+          data: {
+            name: companyName,
+            slug,
+            email: companyEmail || null,
+            phone: companyPhone || null,
+          },
+        })
+        
+        // Superadmin als Owner der Firma hinzufuegen
+        await tx.companyUser.create({
+          data: {
+            userId: user.id,
+            companyId: company.id,
+            role: 'OWNER',
+            isDefault: true,
+          },
+        })
+        
+        // CORE Modul fuer Firma abonnieren
+        const coreModule = await tx.module.findUnique({
+          where: { moduleId: 'CORE' },
+        })
+        
+        if (coreModule) {
+          await tx.subscription.create({
+            data: {
+              companyId: company.id,
+              moduleId: coreModule.id,
+              tier: 'FREE',
+              status: 'ACTIVE',
+            },
+          })
+        }
+      }
+      
+      // System-Einstellungen initialisieren
+      await tx.systemSettings.upsert({
+        where: { id: 'system' },
+        update: {
+          companyName: companyName || 'Mein Unternehmen',
+          companyEmail: companyEmail || null,
+          companyPhone: companyPhone || null,
+        },
+        create: {
+          id: 'system',
+          companyName: companyName || 'Mein Unternehmen',
+          companyEmail: companyEmail || null,
+          companyPhone: companyPhone || null,
+        },
+      })
+      
+      return { user, company }
     })
     
     return NextResponse.json({
       success: true,
-      message: 'Admin-Benutzer wurde erstellt',
+      message: 'Superadmin-Benutzer wurde erstellt',
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
+        id: result.user.id,
+        email: result.user.email,
+        name: result.user.name,
+        role: result.user.role,
       },
+      company: result.company ? {
+        id: result.company.id,
+        name: result.company.name,
+        slug: result.company.slug,
+      } : null,
     })
   } catch (error) {
     console.error('Setup error:', error)
