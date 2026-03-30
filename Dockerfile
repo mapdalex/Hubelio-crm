@@ -38,7 +38,7 @@ RUN pnpm build
 
 # Runner Stage
 FROM base AS runner
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl bash
 WORKDIR /app
 
 ENV NODE_ENV=production
