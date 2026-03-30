@@ -3,6 +3,9 @@ import { db } from '@/lib/db'
 import { getSession, hashPassword, isSuperAdmin } from '@/lib/auth'
 import { generateUniqueSlug } from '@/lib/multi-tenant'
 
+// Maximale Anzahl von Ownern pro Firma
+const MAX_OWNERS_PER_COMPANY = 2
+
 // GET /api/superadmin/companies - Get all companies (Superadmin only)
 export async function GET() {
   try {
