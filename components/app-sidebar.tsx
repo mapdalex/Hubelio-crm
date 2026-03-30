@@ -20,6 +20,8 @@ import {
   Mail,
   BarChart3,
   Lock,
+  Monitor,
+  Globe,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -87,8 +89,18 @@ const getModuleNavItems = (accessibleModules: ModuleId[]): NavItem[] => {
       icon: ShoppingCart,
       module: 'SALES',
       items: [
-        { title: 'Domains', url: '/sales/domains', icon: ShoppingCart, module: 'SALES' },
         { title: 'Services', url: '/sales/services', icon: ShoppingCart, module: 'SALES' },
+      ],
+    },
+    {
+      title: 'IT',
+      url: '/it',
+      icon: Monitor,
+      module: 'IT',
+      items: [
+        { title: 'Uebersicht', url: '/it', icon: Monitor, module: 'IT' },
+        { title: 'PCs & Geraete', url: '/it/computers', icon: Monitor, module: 'IT' },
+        { title: 'Domains', url: '/it/domains', icon: Globe, module: 'IT' },
       ],
     },
     {
