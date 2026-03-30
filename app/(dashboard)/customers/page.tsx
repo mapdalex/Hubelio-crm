@@ -122,6 +122,8 @@ export default function CustomersPage() {
       notes: formData.get('notes'),
     }
     
+    console.log('[v0] Creating customer with data:', data)
+    
     try {
       const res = await fetch('/api/customers', {
         method: 'POST',
@@ -129,12 +131,20 @@ export default function CustomersPage() {
         body: JSON.stringify(data),
       })
       
+      console.log('[v0] Response status:', res.status)
+      const responseData = await res.json()
+      console.log('[v0] Response data:', responseData)
+      
       if (res.ok) {
         setIsCreateOpen(false)
         loadCustomers()
+      } else {
+        console.error('[v0] Error response:', responseData)
+        alert(`Fehler: ${responseData.error || 'Unbekannter Fehler'}`)
       }
     } catch (error) {
-      console.error('Error creating customer:', error)
+      console.error('[v0] Error creating customer:', error)
+      alert('Netzwerkfehler beim Erstellen des Kunden')
     } finally {
       setIsCreating(false)
     }
