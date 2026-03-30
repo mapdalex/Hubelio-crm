@@ -716,6 +716,7 @@ export default function SuperadminPage() {
             </CardContent>
           </Card>
         </TabsContent>
+      </Tabs>
 
       {/* Create Company Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
