@@ -3,9 +3,9 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('Seeding modules...')
+  console.log('[v0] Seeding modules...')
 
-  // Module-Definitionen (nur Module, keine Test-Daten)
+  // Module-Definitionen
   const modules = [
     {
       moduleId: 'CORE',
@@ -98,13 +98,13 @@ async function main() {
   }
 
   console.log('')
-  console.log('Module seeding completed!')
-  console.log(`${modules.length} Module erstellt/aktualisiert.`)
+  console.log('[v0] Module seeding completed!')
+  console.log(`[v0] ${modules.length} Module erstellt/aktualisiert.`)
 }
 
 main()
   .catch((e) => {
-    console.error('Seeding error:', e)
+    console.error('[v0] Seeding error:', e)
     process.exit(1)
   })
   .finally(async () => {
