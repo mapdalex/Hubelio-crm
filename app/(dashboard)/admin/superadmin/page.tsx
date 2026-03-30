@@ -754,7 +754,10 @@ export default function SuperadminPage() {
                       alert(data.message)
                       loadData()
                     } else {
-                      alert(data.error || 'Fehler beim Initialisieren')
+                      const errorMsg = data.details 
+                        ? `${data.error}\n\nDetails: ${data.details}\n\nHinweis: ${data.hint || ''}`
+                        : data.error || 'Fehler beim Initialisieren'
+                      alert(errorMsg)
                     }
                   } catch (err) {
                     alert('Verbindungsfehler')

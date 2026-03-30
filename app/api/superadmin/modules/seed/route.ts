@@ -116,8 +116,13 @@ export async function POST() {
     })
   } catch (error) {
     console.error('Error seeding modules:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler'
     return NextResponse.json(
-      { error: 'Fehler beim Initialisieren der Module' },
+      { 
+        error: 'Fehler beim Initialisieren der Module', 
+        details: errorMessage,
+        hint: 'Moeglicherweise muss die Datenbank-Migration ausgefuehrt werden (prisma migrate)'
+      },
       { status: 500 }
     )
   }
