@@ -220,6 +220,8 @@ export function AppSidebar() {
   const isSuperAdmin = user?.role === 'SUPERADMIN'
   const isEmployee = ['ADMIN', 'MITARBEITER', 'BUCHHALTUNG'].includes(user?.role || '')
   
+  console.log('[v0] Sidebar user role:', user?.role, 'isSuperAdmin:', isSuperAdmin)
+  
   // Get module-aware navigation
   const visibleNavItems = getModuleNavItems(accessibleModules as ModuleId[])
   
