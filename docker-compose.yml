@@ -26,6 +26,7 @@ services:
 
   # Next.js CRM Anwendung
   app:
+    image: ${CRM_APP_IMAGE:-hubelio-crm:latest}
     build:
       context: .
       dockerfile: Dockerfile
