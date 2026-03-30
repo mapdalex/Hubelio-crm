@@ -20,6 +20,12 @@ export async function GET(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {}
     
+    // Multi-tenant filter: Nur Kunden der eigenen Firma anzeigen
+    // SUPERADMIN kann alle sehen, andere nur ihre Firma
+    if (session.role !== 'SUPERADMIN' && session.companyId) {
+      where.companyId = session.companyId
+    }
+    
     // Status filter
     if (isActiveParam !== null) {
       where.isActive = isActiveParam === 'true'
@@ -74,28 +80,19 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('[v0] POST /api/customers - Start')
-    
     const session = await getSession()
-    console.log('[v0] Session:', session ? { userId: session.userId, role: session.role } : 'null')
-    
     if (!session || !isEmployee(session.role)) {
-      console.log('[v0] Authorization failed')
       return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
     
     const data = await request.json()
-    console.log('[v0] Request data:', data)
     
     // Kundennummer generieren
     const settings = await db.systemSettings.findUnique({ where: { id: 'system' } })
-    console.log('[v0] System settings:', settings)
-    
     const prefix = settings?.customerPrefix || 'KD'
     const lastCustomer = await db.customer.findFirst({
       orderBy: { customerNumber: 'desc' },
     })
-    console.log('[v0] Last customer:', lastCustomer?.customerNumber)
     
     let nextNumber = 1
     if (lastCustomer) {
@@ -106,10 +103,10 @@ export async function POST(request: NextRequest) {
     }
     
     const customerNumber = `${prefix}${nextNumber.toString().padStart(5, '0')}`
-    console.log('[v0] Generated customerNumber:', customerNumber)
     
     const customerData = {
       customerNumber,
+      companyId: session.companyId || null, // Multi-tenant: Kunde gehoert zur Firma des Erstellers
       companyName: data.company || data.companyName || null,
       firstName: data.firstName,
       lastName: data.lastName,
@@ -122,12 +119,10 @@ export async function POST(request: NextRequest) {
       country: data.country || 'Deutschland',
       notes: data.notes || null,
     }
-    console.log('[v0] Customer data to create:', customerData)
     
     const customer = await db.customer.create({
       data: customerData,
     })
-    console.log('[v0] Customer created:', customer.id)
     
     // Aktivitaetslog
     await db.activityLog.create({
@@ -140,10 +135,9 @@ export async function POST(request: NextRequest) {
       },
     })
     
-    console.log('[v0] POST /api/customers - Success')
     return NextResponse.json({ customer }, { status: 201 })
   } catch (error) {
-    console.error('[v0] Error creating customer:', error)
+    console.error('Error creating customer:', error)
     return NextResponse.json({ error: 'Fehler beim Erstellen' }, { status: 500 })
   }
 }
