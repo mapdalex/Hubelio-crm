@@ -13,14 +13,17 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
     const search = searchParams.get('search') || ''
-    const filter = searchParams.get('filter') || 'all' // all, expiring, expired
+    const filter = searchParams.get('filter') || 'all' // all, active, inactive, warranty
+    const type = searchParams.get('type') || '' // Desktop, Laptop, Server, etc.
     
     const where: any = {}
     
     if (search) {
       where.OR = [
-        { domainName: { contains: search, mode: 'insensitive' } },
-        { customer: { company: { contains: search, mode: 'insensitive' } } },
+        { name: { contains: search, mode: 'insensitive' } },
+        { serialNumber: { contains: search, mode: 'insensitive' } },
+        { ipAddress: { contains: search, mode: 'insensitive' } },
+        { customer: { companyName: { contains: search, mode: 'insensitive' } } },
         { customer: { lastName: { contains: search, mode: 'insensitive' } } },
       ]
     }
@@ -28,21 +31,26 @@ export async function GET(request: NextRequest) {
     const now = new Date()
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
     
-    if (filter === 'expiring') {
-      where.expiryDate = {
+    if (filter === 'active') {
+      where.isActive = true
+    } else if (filter === 'inactive') {
+      where.isActive = false
+    } else if (filter === 'warranty') {
+      where.warrantyUntil = {
         gte: now,
         lte: thirtyDaysFromNow,
       }
-      where.status = 'active'
-    } else if (filter === 'expired') {
-      where.expiryDate = { lt: now }
-      where.status = 'active'
+      where.isActive = true
     }
     
-    const [domains, total] = await Promise.all([
-      db.domain.findMany({
+    if (type) {
+      where.type = type
+    }
+    
+    const [computers, total] = await Promise.all([
+      db.computer.findMany({
         where,
-        orderBy: { expiryDate: 'asc' },
+        orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
         include: {
@@ -57,11 +65,11 @@ export async function GET(request: NextRequest) {
           },
         },
       }),
-      db.domain.count({ where }),
+      db.computer.count({ where }),
     ])
     
     return NextResponse.json({
-      domains,
+      computers,
       pagination: {
         page,
         limit,
@@ -70,7 +78,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Error fetching domains:', error)
+    console.error('Error fetching computers:', error)
     return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 })
   }
 }
@@ -84,20 +92,24 @@ export async function POST(request: NextRequest) {
     
     const data = await request.json()
     
-    const domain = await db.domain.create({
+    const computer = await db.computer.create({
       data: {
         customerId: data.customerId,
-        domainName: data.domainName,
-        registrar: data.registrar || null,
+        name: data.name,
+        type: data.type || null,
+        manufacturer: data.manufacturer || null,
+        model: data.model || null,
+        serialNumber: data.serialNumber || null,
+        operatingSystem: data.operatingSystem || null,
+        processor: data.processor || null,
+        ram: data.ram || null,
+        storage: data.storage || null,
+        ipAddress: data.ipAddress || null,
+        macAddress: data.macAddress || null,
         purchaseDate: data.purchaseDate ? new Date(data.purchaseDate) : null,
-        expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
-        renewalDate: data.renewalDate ? new Date(data.renewalDate) : null,
-        autoRenew: data.autoRenew ?? true,
-        costPrice: data.costPrice || null,
-        sellPrice: data.sellPrice || null,
-        billingCycle: data.billingCycle || 'yearly',
-        status: data.status || 'active',
+        warrantyUntil: data.warrantyUntil ? new Date(data.warrantyUntil) : null,
         notes: data.notes || null,
+        isActive: data.isActive ?? true,
       },
     })
     
@@ -105,15 +117,15 @@ export async function POST(request: NextRequest) {
       data: {
         userId: session.userId,
         action: 'CREATE',
-        entity: 'Domain',
-        entityId: domain.id,
-        details: `Domain ${domain.domainName} erstellt`,
+        entity: 'Computer',
+        entityId: computer.id,
+        details: `Geraet ${computer.name} erstellt`,
       },
     })
     
-    return NextResponse.json({ domain }, { status: 201 })
+    return NextResponse.json({ computer }, { status: 201 })
   } catch (error) {
-    console.error('Error creating domain:', error)
+    console.error('Error creating computer:', error)
     return NextResponse.json({ error: 'Fehler beim Erstellen' }, { status: 500 })
   }
 }

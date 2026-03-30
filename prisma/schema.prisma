@@ -448,6 +448,7 @@ enum ModuleId {
   CORE
   MESSAGE
   SALES
+  IT
   SOCIALS
   CAMPAIGNS
   ANALYTICS
