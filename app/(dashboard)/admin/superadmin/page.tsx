@@ -95,7 +95,10 @@ export default function SuperadminPage() {
   const [users, setUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   // 'new' = neuen Benutzer anlegen, 'existing' = bestehenden per E-Mail hinzufuegen
   const [adminMode, setAdminMode] = useState<'new' | 'existing'>('new')
@@ -109,6 +112,15 @@ export default function SuperadminPage() {
     adminName: '',
     adminEmail: '',
     adminPassword: '',
+  })
+  
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    website: '',
+    isActive: true,
   })
 
   useEffect(() => {
@@ -179,6 +191,66 @@ export default function SuperadminPage() {
       setError('Verbindungsfehler')
     } finally {
       setIsCreating(false)
+    }
+  }
+
+  const handleEditCompany = (company: Company) => {
+    setEditingCompany(company)
+    setEditFormData({
+      name: company.name,
+      email: company.email || '',
+      phone: company.phone || '',
+      address: '',
+      website: '',
+      isActive: company.isActive,
+    })
+    setError('')
+    setShowEditDialog(true)
+  }
+  
+  const handleSaveCompany = async () => {
+    if (!editingCompany) return
+    
+    setIsSaving(true)
+    setError('')
+    
+    try {
+      const res = await fetch(`/api/superadmin/companies/${editingCompany.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editFormData),
+      })
+      
+      const data = await res.json()
+      
+      if (!res.ok) {
+        setError(data.error || 'Fehler beim Speichern')
+        return
+      }
+      
+      setShowEditDialog(false)
+      setEditingCompany(null)
+      loadData()
+    } catch (err) {
+      setError('Verbindungsfehler')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+  
+  const handleToggleCompanyStatus = async (company: Company) => {
+    try {
+      const res = await fetch(`/api/superadmin/companies/${company.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !company.isActive }),
+      })
+      
+      if (res.ok) {
+        loadData()
+      }
+    } catch (err) {
+      console.error('Error toggling company status:', err)
     }
   }
 
@@ -370,11 +442,21 @@ export default function SuperadminPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>Bearbeiten</DropdownMenuItem>
-                              <DropdownMenuItem>Benutzer verwalten</DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Deaktivieren
+                              <DropdownMenuItem onClick={() => handleEditCompany(company)}>
+                                Bearbeiten
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleToggleCompanyStatus(company)}
+                                className={company.isActive ? 'text-destructive' : 'text-green-600'}
+                              >
+                                {company.isActive ? (
+                                  <>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Deaktivieren
+                                  </>
+                                ) : (
+                                  'Aktivieren'
+                                )}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -637,6 +719,139 @@ export default function SuperadminPage() {
                 </>
               ) : (
                 'Firma erstellen'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Company Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={(open) => {
+        setShowEditDialog(open)
+        if (!open) {
+          setEditingCompany(null)
+          setError('')
+        }
+      }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Firma bearbeiten</DialogTitle>
+            <DialogDescription>
+              Bearbeiten Sie die Firmendaten von {editingCompany?.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {error && (
+            <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="editName">Firmenname *</Label>
+              <Input
+                id="editName"
+                value={editFormData.name}
+                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="editEmail">E-Mail</Label>
+                <Input
+                  id="editEmail"
+                  type="email"
+                  value={editFormData.email}
+                  onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="editPhone">Telefon</Label>
+                <Input
+                  id="editPhone"
+                  value={editFormData.phone}
+                  onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="editAddress">Adresse</Label>
+              <Input
+                id="editAddress"
+                value={editFormData.address}
+                onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="editWebsite">Website</Label>
+              <Input
+                id="editWebsite"
+                value={editFormData.website}
+                onChange={(e) => setEditFormData({ ...editFormData, website: e.target.value })}
+              />
+            </div>
+            <div className="flex items-center justify-between border rounded-lg p-3">
+              <div>
+                <Label>Status</Label>
+                <p className="text-sm text-muted-foreground">
+                  {editFormData.isActive ? 'Firma ist aktiv' : 'Firma ist deaktiviert'}
+                </p>
+              </div>
+              <Button
+                variant={editFormData.isActive ? 'destructive' : 'default'}
+                size="sm"
+                onClick={() => setEditFormData({ ...editFormData, isActive: !editFormData.isActive })}
+              >
+                {editFormData.isActive ? 'Deaktivieren' : 'Aktivieren'}
+              </Button>
+            </div>
+            
+            {/* Liste der Firmen-Admins */}
+            {editingCompany && (
+              <div className="border-t pt-4">
+                <Label className="mb-2 block">Firmen-Admins</Label>
+                <div className="space-y-2">
+                  {editingCompany.companyUsers
+                    .filter(cu => ['OWNER', 'ADMIN'].includes(cu.role))
+                    .map(cu => (
+                      <div key={cu.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="text-xs">
+                              {getInitials(cu.user.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="text-sm font-medium">{cu.user.name}</div>
+                            <div className="text-xs text-muted-foreground">{cu.user.email}</div>
+                          </div>
+                        </div>
+                        <Badge variant={cu.role === 'OWNER' ? 'default' : 'secondary'}>
+                          {cu.role}
+                        </Badge>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Abbrechen
+            </Button>
+            <Button 
+              onClick={handleSaveCompany}
+              disabled={isSaving || !editFormData.name}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Wird gespeichert...
+                </>
+              ) : (
+                'Speichern'
               )}
             </Button>
           </DialogFooter>
