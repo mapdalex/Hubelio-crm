@@ -17,6 +17,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
   Table,
   TableBody,
   TableCell,
@@ -1441,21 +1449,25 @@ export default function SuperadminPage() {
                           </div>
                           <p className="text-sm text-muted-foreground">{module.description}</p>
                         </div>
-                        <div className="flex flex-col gap-2 items-end relative z-50">
+                        <div className="flex flex-col gap-2 items-end">
                           <Label className="text-xs text-muted-foreground">Abo-Plan</Label>
-                          <select
+                          <Select
                             value={currentTier || 'FREE'}
-                            onChange={(e) => {
-                              console.log('[v0] Plan selected:', e.target.value)
-                              handleModuleSubscription(module.moduleId, e.target.value)
+                            onValueChange={(value) => {
+                              console.log('[v0] Plan selected:', value)
+                              handleModuleSubscription(module.moduleId, value)
                             }}
-                            className="px-3 py-2 border rounded-lg text-sm min-w-[160px] bg-background cursor-pointer"
                           >
-                            <option value="FREE">Free (0 Module)</option>
-                            <option value="STARTER">Starter (1 Modul)</option>
-                            <option value="PRO">Pro (2 Module)</option>
-                            <option value="ENTERPRISE">Enterprise (3 Module)</option>
-                          </select>
+                            <SelectTrigger className="w-[180px]">
+                              <SelectValue placeholder="Plan waehlen" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="FREE">Free (0 Module)</SelectItem>
+                              <SelectItem value="STARTER">Starter (1 Modul)</SelectItem>
+                              <SelectItem value="PRO">Pro (2 Module)</SelectItem>
+                              <SelectItem value="ENTERPRISE">Enterprise (3 Module)</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
                     </Card>
@@ -1480,21 +1492,17 @@ export default function SuperadminPage() {
                         className={`p-4 transition-colors ${isActive ? 'border-primary/50 bg-primary/5' : 'hover:border-muted-foreground/30'}`}
                       >
                         <div className="flex items-center gap-4">
-                          <input
-                            type="checkbox"
+                          <Checkbox
+                            id={`module-${module.moduleId}`}
                             checked={isActive}
-                            onChange={(e) => {
-                              console.log('[v0] Checkbox changed:', module.moduleId, e.target.checked)
-                              handleToggleModule(module.moduleId, e.target.checked)
+                            onCheckedChange={(checked) => {
+                              console.log('[v0] Checkbox changed:', module.moduleId, checked)
+                              handleToggleModule(module.moduleId, checked === true)
                             }}
-                            className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
                           />
                           <label 
+                            htmlFor={`module-${module.moduleId}`}
                             className="flex-1 cursor-pointer"
-                            onClick={() => {
-                              console.log('[v0] Label clicked:', module.moduleId, !isActive)
-                              handleToggleModule(module.moduleId, !isActive)
-                            }}
                           >
                             <div className="flex items-center gap-2">
                               <h3 className="font-semibold">{module.name}</h3>
