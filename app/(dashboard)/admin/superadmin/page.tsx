@@ -332,6 +332,10 @@ export default function SuperadminPage() {
   }
   
 
+  const getOwnerCount = (company: Company) => {
+    return company.companyUsers.filter(cu => cu.role === 'OWNER').length
+  }
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
