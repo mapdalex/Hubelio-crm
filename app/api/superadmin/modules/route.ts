@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { isSuperAdmin } from '@/lib/auth'
+import { getSession } from '@/lib/auth'
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     // Nur Superadmin kann Module abrufen
-    const isSuperAdminUser = await isSuperAdmin()
-    if (!isSuperAdminUser) {
+    const session = await getSession()
+    if (!session?.userId || session.role !== 'SUPERADMIN') {
       return NextResponse.json(
         { error: 'Nur Superadmin darf Module abrufen' },
         { status: 403 }
