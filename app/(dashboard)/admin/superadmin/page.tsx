@@ -348,7 +348,12 @@ export default function SuperadminPage() {
   }
 
   const handleModuleSubscription = async (moduleId: string, tier: string) => {
-    if (!selectedCompanyForModules) return
+    if (!selectedCompanyForModules) {
+      console.log('[v0] No company selected for modules')
+      return
+    }
+
+    console.log('[v0] handleModuleSubscription called:', { moduleId, tier, companyId: selectedCompanyForModules.id })
 
     try {
       const res = await fetch(
@@ -360,15 +365,22 @@ export default function SuperadminPage() {
         }
       )
 
+      const data = await res.json()
+      console.log('[v0] Subscription response:', { ok: res.ok, status: res.status, data })
+
       if (res.ok) {
         loadCompanySubscriptions(selectedCompanyForModules.id)
+      } else {
+        console.error('[v0] Subscription error:', data)
       }
     } catch (err) {
-      console.error('Error updating subscription:', err)
+      console.error('[v0] Error updating subscription:', err)
     }
   }
   
   const openModulesDialog = (company: Company) => {
+    console.log('[v0] Opening modules dialog for company:', company.name, company.id)
+    console.log('[v0] Available modules:', modules)
     setSelectedCompanyForModules(company)
     loadCompanySubscriptions(company.id)
     setShowModulesDialog(true)
@@ -388,26 +400,34 @@ export default function SuperadminPage() {
   }
   
   const handleToggleModule = async (moduleId: string, activate: boolean) => {
-    if (!selectedCompanyForModules) return
+    console.log('[v0] handleToggleModule called:', { moduleId, activate })
+    
+    if (!selectedCompanyForModules) {
+      console.log('[v0] No company selected')
+      return
+    }
     
     if (activate) {
       // Aktivieren mit dem aktuellen CORE-Plan
       const coreTier = getCoreTier()
+      console.log('[v0] Activating module with tier:', coreTier)
       await handleModuleSubscription(moduleId, coreTier)
     } else {
       // Deaktivieren - Subscription loeschen
       try {
         // Finde die echte Modul-ID (UUID)
         const sub = companySubscriptions.find(s => s.module?.moduleId === moduleId)
+        console.log('[v0] Found subscription to delete:', sub)
         if (sub) {
-          await fetch(
+          const res = await fetch(
             `/api/superadmin/companies/${selectedCompanyForModules.id}/subscriptions?moduleId=${sub.moduleId}`,
             { method: 'DELETE' }
           )
+          console.log('[v0] Delete response:', res.status)
           loadCompanySubscriptions(selectedCompanyForModules.id)
         }
       } catch (err) {
-        console.error('Error deactivating module:', err)
+        console.error('[v0] Error deactivating module:', err)
       }
     }
   }
