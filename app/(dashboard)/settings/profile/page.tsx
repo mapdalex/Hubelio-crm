@@ -18,8 +18,18 @@ import {
 import { Loader2, Save, Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
+const roleLabels: Record<string, string> = {
+  SUPERADMIN: 'Super-Administrator',
+  ADMIN: 'Administrator',
+  USER: 'Benutzer',
+  OWNER: 'Eigentuemer',
+  MANAGER: 'Manager',
+  MEMBER: 'Mitglied',
+  VIEWER: 'Betrachter',
+}
+
 export default function ProfilePage() {
-  const { user } = useAuth()
+  const { user, companyRole } = useAuth()
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -145,10 +155,21 @@ export default function ProfilePage() {
               />
             </div>
 
+            {companyRole && (
+              <div className="grid gap-2">
+                <Label>Firmenrolle</Label>
+                <Input
+                  value={roleLabels[companyRole] || companyRole}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+            )}
+
             <div className="grid gap-2">
-              <Label htmlFor="role">Rolle</Label>
+              <Label>Systemrolle</Label>
               <Input
-                value={user?.role || 'Unbekannt'}
+                value={roleLabels[user?.role || ''] || user?.role || 'Unbekannt'}
                 disabled
                 className="bg-muted"
               />
