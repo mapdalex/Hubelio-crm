@@ -41,6 +41,8 @@ import {
   Crown,
   UserCog,
   Trash2,
+  UserPlus,
+  UserCheck,
 } from 'lucide-react'
 
 interface Company {
@@ -95,6 +97,8 @@ export default function SuperadminPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState('')
+  // 'new' = neuen Benutzer anlegen, 'existing' = bestehenden per E-Mail hinzufuegen
+  const [adminMode, setAdminMode] = useState<'new' | 'existing'>('new')
   
   const [formData, setFormData] = useState({
     companyName: '',
@@ -145,7 +149,10 @@ export default function SuperadminPage() {
       const res = await fetch('/api/superadmin/companies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          createNewUser: adminMode === 'new',
+        }),
       })
       
       const data = await res.json()
@@ -156,6 +163,7 @@ export default function SuperadminPage() {
       }
       
       setShowCreateDialog(false)
+      setAdminMode('new')
       setFormData({
         companyName: '',
         companyEmail: '',
@@ -518,45 +526,94 @@ export default function SuperadminPage() {
               </div>
             </div>
             
-            <div className="border-t pt-4 space-y-2">
-              <h4 className="font-medium flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                Firmen-Admin (wird Owner)
-              </h4>
-              <p className="text-sm text-muted-foreground">
-                Dieser Benutzer wird als Owner der Firma angelegt und kann weitere Benutzer hinzufuegen.
-              </p>
-              <div className="grid gap-3">
-                <div>
-                  <Label htmlFor="adminName">Name *</Label>
-                  <Input
-                    id="adminName"
-                    value={formData.adminName}
-                    onChange={(e) => setFormData({ ...formData, adminName: e.target.value })}
-                    placeholder="Max Mustermann"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="adminEmail">E-Mail *</Label>
-                  <Input
-                    id="adminEmail"
-                    type="email"
-                    value={formData.adminEmail}
-                    onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
-                    placeholder="admin@beispiel.de"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="adminPassword">Passwort *</Label>
-                  <Input
-                    id="adminPassword"
-                    type="password"
-                    value={formData.adminPassword}
-                    onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
-                    placeholder="Mindestens 8 Zeichen"
-                  />
-                </div>
+            <div className="border-t pt-4 space-y-3">
+              <div>
+                <h4 className="font-medium flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  Firmen-Admin (wird Owner)
+                </h4>
+                <p className="text-sm text-muted-foreground">
+                  Dieser Benutzer wird als Owner der Firma angelegt.
+                </p>
               </div>
+
+              {/* Toggle: Neuer Benutzer oder bestehender */}
+              <div className="flex rounded-lg border overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setAdminMode('new')}
+                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium transition-colors ${
+                    adminMode === 'new'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-background text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Neuen Benutzer anlegen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAdminMode('existing')}
+                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium transition-colors border-l ${
+                    adminMode === 'existing'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-background text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  <UserCheck className="h-4 w-4" />
+                  Bestehenden hinzufuegen
+                </button>
+              </div>
+
+              {adminMode === 'new' ? (
+                <div className="grid gap-3">
+                  <div>
+                    <Label htmlFor="adminName">Name *</Label>
+                    <Input
+                      id="adminName"
+                      value={formData.adminName}
+                      onChange={(e) => setFormData({ ...formData, adminName: e.target.value })}
+                      placeholder="Max Mustermann"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="adminEmail">E-Mail *</Label>
+                    <Input
+                      id="adminEmail"
+                      type="email"
+                      value={formData.adminEmail}
+                      onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
+                      placeholder="admin@beispiel.de"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="adminPassword">Passwort *</Label>
+                    <Input
+                      id="adminPassword"
+                      type="password"
+                      value={formData.adminPassword}
+                      onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
+                      placeholder="Mindestens 8 Zeichen"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  <div>
+                    <Label htmlFor="adminEmailExisting">E-Mail des bestehenden Benutzers *</Label>
+                    <Input
+                      id="adminEmailExisting"
+                      type="email"
+                      value={formData.adminEmail}
+                      onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
+                      placeholder="benutzer@beispiel.de"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Der Benutzer muss bereits im System vorhanden sein.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           
@@ -566,7 +623,12 @@ export default function SuperadminPage() {
             </Button>
             <Button 
               onClick={handleCreateCompany}
-              disabled={isCreating || !formData.companyName || !formData.adminName || !formData.adminEmail || !formData.adminPassword}
+              disabled={
+                isCreating || 
+                !formData.companyName || 
+                !formData.adminEmail ||
+                (adminMode === 'new' && (!formData.adminName || !formData.adminPassword))
+              }
             >
               {isCreating ? (
                 <>
