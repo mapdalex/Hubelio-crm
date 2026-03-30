@@ -22,6 +22,7 @@ import {
   Lock,
   Monitor,
   Globe,
+  Shield,
 } from 'lucide-react'
 import {
   Sidebar,
