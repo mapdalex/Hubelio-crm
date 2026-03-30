@@ -674,6 +674,43 @@ export default function SuperadminPage() {
         </TabsContent>
 
         <TabsContent value="modules" className="space-y-4">
+          {/* Module initialisieren Card */}
+          <Card className="border-dashed">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Module initialisieren
+              </CardTitle>
+              <CardDescription>
+                Falls keine Module angezeigt werden, initialisieren Sie diese hier einmalig.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const res = await fetch('/api/superadmin/modules/seed', { method: 'POST' })
+                    const data = await res.json()
+                    if (res.ok) {
+                      alert(data.message)
+                      loadData()
+                    } else {
+                      alert(data.error || 'Fehler beim Initialisieren')
+                    }
+                  } catch (err) {
+                    alert('Verbindungsfehler')
+                  }
+                }}
+              >
+                Module in Datenbank erstellen
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2">
+                Erstellt die 7 Standard-Module (CORE, MESSAGE, SALES, IT, SOCIALS, CAMPAIGNS, ANALYTICS)
+              </p>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
