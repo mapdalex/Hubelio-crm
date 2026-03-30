@@ -43,6 +43,7 @@ import {
   Trash2,
   UserPlus,
   UserCheck,
+  Package,
 } from 'lucide-react'
 
 interface Company {
@@ -89,15 +90,28 @@ interface User {
   }[]
 }
 
+interface Module {
+  moduleId: string
+  name: string
+  description: string
+  icon: string
+  basePrice: number
+  status: 'ACTIVE' | 'BETA' | 'INACTIVE'
+  features: string
+}
+
 export default function SuperadminPage() {
   const { user } = useAuth()
   const [companies, setCompanies] = useState<Company[]>([])
   const [users, setUsers] = useState<User[]>([])
+  const [modules, setModules] = useState<Module[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [editingCompany, setEditingCompany] = useState<Company | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [selectedCompanyForModules, setSelectedCompanyForModules] = useState<Company | null>(null)
+  const [showModulesDialog, setShowModulesDialog] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   // 'new' = neuen Benutzer anlegen, 'existing' = bestehenden per E-Mail hinzufuegen
@@ -137,9 +151,10 @@ export default function SuperadminPage() {
   const loadData = async () => {
     setIsLoading(true)
     try {
-      const [companiesRes, usersRes] = await Promise.all([
+      const [companiesRes, usersRes, modulesRes] = await Promise.all([
         fetch('/api/superadmin/companies'),
         fetch('/api/superadmin/users'),
+        fetch('/api/superadmin/modules'),
       ])
       
       if (companiesRes.ok) {
@@ -150,6 +165,11 @@ export default function SuperadminPage() {
       if (usersRes.ok) {
         const data = await usersRes.json()
         setUsers(data.users)
+      }
+
+      if (modulesRes.ok) {
+        const data = await modulesRes.json()
+        setModules(data)
       }
     } catch (err) {
       console.error('Error loading data:', err)
@@ -290,9 +310,27 @@ export default function SuperadminPage() {
     }
   }
   
-  const getOwnerCount = (company: Company) => {
-    return company.companyUsers.filter(cu => cu.role === 'OWNER').length
+  const handleModuleSubscription = async (moduleId: string, tier: string) => {
+    if (!selectedCompanyForModules) return
+
+    try {
+      const res = await fetch(
+        `/api/superadmin/companies/${selectedCompanyForModules.id}/subscriptions`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ moduleId, tier }),
+        }
+      )
+
+      if (res.ok) {
+        loadData()
+      }
+    } catch (err) {
+      console.error('Error updating subscription:', err)
+    }
   }
+  
 
   const getInitials = (name: string) => {
     return name
@@ -413,6 +451,10 @@ export default function SuperadminPage() {
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Alle Benutzer
+          </TabsTrigger>
+          <TabsTrigger value="modules" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Module
           </TabsTrigger>
         </TabsList>
 
@@ -626,7 +668,50 @@ export default function SuperadminPage() {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
+
+        <TabsContent value="modules" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Module verwalten
+              </CardTitle>
+              <CardDescription>
+                Module zu Firmen hinzufuegen/entfernen und Abo-Stufen konfigurieren
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <Label className="mb-2 block">Firma auswaehlen</Label>
+                  <select
+                    value={selectedCompanyForModules?.id || ''}
+                    onChange={(e) => {
+                      const company = companies.find(c => c.id === e.target.value)
+                      setSelectedCompanyForModules(company || null)
+                    }}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  >
+                    <option value="">-- Waehlen Sie eine Firma --</option>
+                    {companies.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {selectedCompanyForModules && (
+                  <Button 
+                    onClick={() => setShowModulesDialog(true)}
+                    className="w-full"
+                  >
+                    <Package className="mr-2 h-4 w-4" />
+                    Module fuer {selectedCompanyForModules.name} konfigurieren
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
       {/* Create Company Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
@@ -1020,6 +1105,74 @@ export default function SuperadminPage() {
                   Als Eigentuemer hinzufuegen
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Modules Configuration Dialog */}
+      <Dialog open={showModulesDialog} onOpenChange={setShowModulesDialog}>
+        <DialogContent className="max-w-3xl max-h-96 overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Module konfigurieren
+            </DialogTitle>
+            <DialogDescription>
+              Waehlen Sie die Module und Abo-Stufen fuer {selectedCompanyForModules?.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : modules.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Keine Module verfuegbar
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {modules.map((module) => (
+                <Card key={module.moduleId} className="p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <h3 className="font-semibold">{module.name}</h3>
+                      <p className="text-sm text-muted-foreground">{module.description}</p>
+                      <Badge variant="outline" className="mt-2 text-xs">
+                        {module.status}
+                      </Badge>
+                    </div>
+                    <div className="flex gap-2">
+                      <select
+                        defaultValue=""
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            handleModuleSubscription(module.moduleId, e.target.value)
+                            e.target.value = ''
+                          }
+                        }}
+                        className="px-2 py-1 border rounded text-sm"
+                      >
+                        <option value="">Stufe waehlen</option>
+                        <option value="FREE">Free</option>
+                        <option value="STARTER">Starter</option>
+                        <option value="PRO">Pro</option>
+                        <option value="ENTERPRISE">Enterprise</option>
+                      </select>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowModulesDialog(false)}
+            >
+              Schliessen
             </Button>
           </DialogFooter>
         </DialogContent>

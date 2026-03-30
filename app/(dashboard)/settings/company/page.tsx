@@ -44,7 +44,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Save, Building2, Users, Settings, UserPlus, Loader2, Trash2, AlertTriangle, Crown } from 'lucide-react'
+import { Save, Building2, Users, Settings, UserPlus, Loader2, Trash2, AlertTriangle, Crown, Package } from 'lucide-react'
 
 type CompanyUser = {
   id: string
@@ -57,6 +57,18 @@ type CompanyUser = {
     role: string
     isActive: boolean
     lastLogin: string | null
+  }
+}
+
+type ModuleSubscription = {
+  moduleId: string
+  tier: string
+  module: {
+    name: string
+    description: string
+    icon: string
+    basePrice: number
+    status: string
   }
 }
 
@@ -74,6 +86,7 @@ export default function CompanySettingsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [users, setUsers] = useState<CompanyUser[]>([])
+  const [modules, setModules] = useState<ModuleSubscription[]>([])
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false)
   const [newUserEmail, setNewUserEmail] = useState('')
@@ -104,9 +117,14 @@ export default function CompanySettingsPage() {
 
   const loadCompanyData = async () => {
     try {
-      const res = await fetch(`/api/companies/${currentCompany?.id}`)
-      if (res.ok) {
-        const data = await res.json()
+      const [companyRes, usersRes, modulesRes] = await Promise.all([
+        fetch(`/api/companies/${currentCompany?.id}`),
+        fetch(`/api/companies/${currentCompany?.id}/users`),
+        fetch(`/api/companies/${currentCompany?.id}/subscriptions`),
+      ])
+
+      if (companyRes.ok) {
+        const data = await companyRes.json()
         setFormData({
           name: data.company.name || '',
           email: data.company.email || '',
@@ -116,6 +134,16 @@ export default function CompanySettingsPage() {
           timezone: data.company.timezone || 'Europe/Berlin',
           currency: data.company.currency || 'EUR',
         })
+      }
+
+      if (usersRes.ok) {
+        const data = await usersRes.json()
+        setUsers(data.users)
+      }
+
+      if (modulesRes.ok) {
+        const data = await modulesRes.json()
+        setModules(data)
       }
     } catch (error) {
       console.error('Error loading company:', error)
@@ -279,6 +307,10 @@ export default function CompanySettingsPage() {
           <TabsTrigger value="users">
             <Users className="mr-2 h-4 w-4" />
             Benutzer
+          </TabsTrigger>
+          <TabsTrigger value="modules">
+            <Package className="mr-2 h-4 w-4" />
+            Module
           </TabsTrigger>
           {isOwner && (
             <TabsTrigger value="danger">
@@ -493,8 +525,61 @@ export default function CompanySettingsPage() {
           </Card>
         </TabsContent>
         
-        {isOwner && (
-          <TabsContent value="danger" className="space-y-4">
+        <TabsContent value="modules" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Ihre gebuchten Module
+              </CardTitle>
+              <CardDescription>
+                Uebersicht der Module, die fuer Ihre Firma verfuegbar sind
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : modules.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>Noch keine Module fuer Ihre Firma aktiviert</p>
+                  <p className="text-sm">Kontaktieren Sie den Admin, um Module zu aktivieren</p>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {modules.map((subscription) => (
+                    <Card key={subscription.moduleId} className="p-4 border">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-base">{subscription.module.name}</h3>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {subscription.module.description}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 mt-4">
+                        <Badge variant="outline" className="text-xs">
+                          Tier: {subscription.tier}
+                        </Badge>
+                        {subscription.module.status === 'BETA' && (
+                          <Badge variant="secondary" className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-900/20">
+                            Beta
+                          </Badge>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="danger" className="space-y-4">
+            {isOwner ? (
             <Card className="border-destructive">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-destructive">
@@ -574,6 +659,16 @@ export default function CompanySettingsPage() {
                 </AlertDialog>
               </CardContent>
             </Card>
+            ) : (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center text-muted-foreground">
+                    <AlertTriangle className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Diese Seite ist nur fuer Eigentuemer zugaenglich</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         )}
       </Tabs>
