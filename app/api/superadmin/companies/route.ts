@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
             email: adminEmail.toLowerCase(),
             password: hashedPassword,
             name: adminName,
-            role: 'USER', // Normale Benutzer - Firmenrolle bestimmt Berechtigungen innerhalb der Firma
+            role: 'ADMIN', // Firmen-Admin - CompanyRole OWNER bestimmt Berechtigungen innerhalb der Firma
           },
         })
       } else {
