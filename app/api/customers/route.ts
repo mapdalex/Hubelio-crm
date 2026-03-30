@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     if (search) {
       where.OR = [
         { customerNumber: { contains: search, mode: 'insensitive' } },
-        { company: { contains: search, mode: 'insensitive' } },
+        { companyName: { contains: search, mode: 'insensitive' } },
         { firstName: { contains: search, mode: 'insensitive' } },
         { lastName: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
     const customer = await db.customer.create({
       data: {
         customerNumber,
-        company: data.company || null,
+        companyName: data.company || data.companyName || null,
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email || null,

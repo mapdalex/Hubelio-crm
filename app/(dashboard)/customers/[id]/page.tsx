@@ -101,7 +101,7 @@ type TicketItem = {
 type Customer = {
   id: string
   customerNumber: string
-  company: string | null
+  companyName: string | null
   firstName: string
   lastName: string
   email: string | null
@@ -340,7 +340,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <h1 className="text-3xl font-bold tracking-tight">
-              {customer.company || `${customer.firstName} ${customer.lastName}`}
+              {customer.companyName || `${customer.firstName} ${customer.lastName}`}
             </h1>
             {!customer.isActive && <Badge variant="secondary">Inaktiv</Badge>}
           </div>
@@ -389,10 +389,10 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                 <CardTitle className="text-base">Kontaktdaten</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {customer.company && (
+                {customer.companyName && (
                   <div className="flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-muted-foreground" />
-                    <span>{customer.company}</span>
+                    <span>{customer.companyName}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2">
@@ -1074,7 +1074,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="edit-company">Firma</Label>
-                <Input id="edit-company" name="company" defaultValue={customer.company || ''} />
+                <Input id="edit-company" name="company" defaultValue={customer.companyName || ''} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">

@@ -57,7 +57,7 @@ export async function PATCH(
     const customer = await db.customer.update({
       where: { id },
       data: {
-        company: data.company,
+        companyName: data.company ?? data.companyName,
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
