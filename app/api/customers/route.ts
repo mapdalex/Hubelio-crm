@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     if (search) {
       where.OR = [
         { customerNumber: { contains: search, mode: 'insensitive' } },
-        { company: { contains: search, mode: 'insensitive' } },
+        { companyName: { contains: search, mode: 'insensitive' } },
         { firstName: { contains: search, mode: 'insensitive' } },
         { lastName: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
@@ -74,19 +74,28 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[v0] POST /api/customers - Start')
+    
     const session = await getSession()
+    console.log('[v0] Session:', session ? { userId: session.userId, role: session.role } : 'null')
+    
     if (!session || !isEmployee(session.role)) {
+      console.log('[v0] Authorization failed')
       return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
     
     const data = await request.json()
+    console.log('[v0] Request data:', data)
     
     // Kundennummer generieren
     const settings = await db.systemSettings.findUnique({ where: { id: 'system' } })
+    console.log('[v0] System settings:', settings)
+    
     const prefix = settings?.customerPrefix || 'KD'
     const lastCustomer = await db.customer.findFirst({
       orderBy: { customerNumber: 'desc' },
     })
+    console.log('[v0] Last customer:', lastCustomer?.customerNumber)
     
     let nextNumber = 1
     if (lastCustomer) {
@@ -97,23 +106,28 @@ export async function POST(request: NextRequest) {
     }
     
     const customerNumber = `${prefix}${nextNumber.toString().padStart(5, '0')}`
+    console.log('[v0] Generated customerNumber:', customerNumber)
+    
+    const customerData = {
+      customerNumber,
+      companyName: data.company || data.companyName || null,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email || null,
+      phone: data.phone || null,
+      mobile: data.mobile || null,
+      street: data.street || null,
+      zipCode: data.zipCode || null,
+      city: data.city || null,
+      country: data.country || 'Deutschland',
+      notes: data.notes || null,
+    }
+    console.log('[v0] Customer data to create:', customerData)
     
     const customer = await db.customer.create({
-      data: {
-        customerNumber,
-        company: data.company || null,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email || null,
-        phone: data.phone || null,
-        mobile: data.mobile || null,
-        street: data.street || null,
-        zipCode: data.zipCode || null,
-        city: data.city || null,
-        country: data.country || 'Deutschland',
-        notes: data.notes || null,
-      },
+      data: customerData,
     })
+    console.log('[v0] Customer created:', customer.id)
     
     // Aktivitaetslog
     await db.activityLog.create({
@@ -126,9 +140,10 @@ export async function POST(request: NextRequest) {
       },
     })
     
+    console.log('[v0] POST /api/customers - Success')
     return NextResponse.json({ customer }, { status: 201 })
   } catch (error) {
-    console.error('Error creating customer:', error)
+    console.error('[v0] Error creating customer:', error)
     return NextResponse.json({ error: 'Fehler beim Erstellen' }, { status: 500 })
   }
 }

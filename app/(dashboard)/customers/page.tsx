@@ -46,7 +46,7 @@ import { Spinner } from '@/components/ui/spinner'
 type Customer = {
   id: string
   customerNumber: string
-  company: string | null
+  companyName: string | null
   firstName: string
   lastName: string
   email: string | null
@@ -122,6 +122,8 @@ export default function CustomersPage() {
       notes: formData.get('notes'),
     }
     
+    console.log('[v0] Creating customer with data:', data)
+    
     try {
       const res = await fetch('/api/customers', {
         method: 'POST',
@@ -129,12 +131,20 @@ export default function CustomersPage() {
         body: JSON.stringify(data),
       })
       
+      console.log('[v0] Response status:', res.status)
+      const responseData = await res.json()
+      console.log('[v0] Response data:', responseData)
+      
       if (res.ok) {
         setIsCreateOpen(false)
         loadCustomers()
+      } else {
+        console.error('[v0] Error response:', responseData)
+        alert(`Fehler: ${responseData.error || 'Unbekannter Fehler'}`)
       }
     } catch (error) {
-      console.error('Error creating customer:', error)
+      console.error('[v0] Error creating customer:', error)
+      alert('Netzwerkfehler beim Erstellen des Kunden')
     } finally {
       setIsCreating(false)
     }
@@ -319,7 +329,7 @@ export default function CustomersPage() {
                       <TableCell>
                         <Link href={`/customers/${customer.id}`} className="flex items-center gap-3 hover:underline">
                           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                            {customer.company ? (
+                            {customer.companyName ? (
                               <Building2 className="h-5 w-5 text-muted-foreground" />
                             ) : (
                               <User className="h-5 w-5 text-muted-foreground" />
@@ -327,11 +337,11 @@ export default function CustomersPage() {
                           </div>
                           <div>
                             <div className="font-medium">
-                              {customer.company || `${customer.firstName} ${customer.lastName}`}
+                              {customer.companyName || `${customer.firstName} ${customer.lastName}`}
                             </div>
                             <div className="text-sm text-muted-foreground">
                               {customer.customerNumber}
-                              {customer.company && ` - ${customer.firstName} ${customer.lastName}`}
+                              {customer.companyName && ` - ${customer.firstName} ${customer.lastName}`}
                             </div>
                           </div>
                         </Link>
