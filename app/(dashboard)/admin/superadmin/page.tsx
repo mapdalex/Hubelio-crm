@@ -112,6 +112,7 @@ export default function SuperadminPage() {
   const [isCreating, setIsCreating] = useState(false)
   const [selectedCompanyForModules, setSelectedCompanyForModules] = useState<Company | null>(null)
   const [showModulesDialog, setShowModulesDialog] = useState(false)
+  const [companySubscriptions, setCompanySubscriptions] = useState<any[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   // 'new' = neuen Benutzer anlegen, 'existing' = bestehenden per E-Mail hinzufuegen
@@ -334,6 +335,18 @@ export default function SuperadminPage() {
     }
   }
   
+  const loadCompanySubscriptions = async (companyId: string) => {
+    try {
+      const res = await fetch(`/api/superadmin/companies/${companyId}/subscriptions`)
+      if (res.ok) {
+        const data = await res.json()
+        setCompanySubscriptions(data)
+      }
+    } catch (err) {
+      console.error('Error loading subscriptions:', err)
+    }
+  }
+
   const handleModuleSubscription = async (moduleId: string, tier: string) => {
     if (!selectedCompanyForModules) return
 
@@ -348,11 +361,22 @@ export default function SuperadminPage() {
       )
 
       if (res.ok) {
-        loadData()
+        loadCompanySubscriptions(selectedCompanyForModules.id)
       }
     } catch (err) {
       console.error('Error updating subscription:', err)
     }
+  }
+  
+  const openModulesDialog = (company: Company) => {
+    setSelectedCompanyForModules(company)
+    loadCompanySubscriptions(company.id)
+    setShowModulesDialog(true)
+  }
+  
+  const getSubscriptionTier = (moduleId: string): string => {
+    const sub = companySubscriptions.find(s => s.module?.moduleId === moduleId)
+    return sub?.tier || ''
   }
   
 
@@ -809,31 +833,36 @@ export default function SuperadminPage() {
             <CardContent>
               <div className="space-y-4">
                 <div>
-                  <Label className="mb-2 block">Firma auswaehlen</Label>
-                  <select
-                    value={selectedCompanyForModules?.id || ''}
-                    onChange={(e) => {
-                      const company = companies.find(c => c.id === e.target.value)
-                      setSelectedCompanyForModules(company || null)
-                    }}
-                    className="w-full px-3 py-2 border rounded-lg"
-                  >
-                    <option value="">-- Waehlen Sie eine Firma --</option>
-                    {companies.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {selectedCompanyForModules && (
-                  <Button 
-                    onClick={() => setShowModulesDialog(true)}
-                    className="w-full"
-                  >
-                    <Package className="mr-2 h-4 w-4" />
-                    Module fuer {selectedCompanyForModules.name} konfigurieren
-                  </Button>
-                )}
+  <Label className="mb-2 block">Firma auswaehlen</Label>
+  <select
+  value={selectedCompanyForModules?.id || ''}
+  onChange={(e) => {
+  const company = companies.find(c => c.id === e.target.value)
+  if (company) {
+  openModulesDialog(company)
+  } else {
+  setSelectedCompanyForModules(null)
+  setCompanySubscriptions([])
+  }
+  }}
+  className="w-full px-3 py-2 border rounded-lg"
+  >
+  <option value="">-- Waehlen Sie eine Firma --</option>
+  {companies.map(c => (
+  <option key={c.id} value={c.id}>{c.name}</option>
+  ))}
+  </select>
+  </div>
+  
+  {selectedCompanyForModules && (
+  <Button
+  onClick={() => openModulesDialog(selectedCompanyForModules)}
+  className="w-full"
+  >
+  <Package className="mr-2 h-4 w-4" />
+  Module fuer {selectedCompanyForModules.name} konfigurieren
+  </Button>
+  )}
               </div>
             </CardContent>
           </Card>
@@ -1322,7 +1351,7 @@ export default function SuperadminPage() {
       
       {/* Modules Configuration Dialog */}
       <Dialog open={showModulesDialog} onOpenChange={setShowModulesDialog}>
-        <DialogContent className="max-w-3xl max-h-96 overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
@@ -1342,38 +1371,47 @@ export default function SuperadminPage() {
               Keine Module verfuegbar
             </div>
           ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {modules.map((module) => (
-                <Card key={module.moduleId} className="p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <h3 className="font-semibold">{module.name}</h3>
-                      <p className="text-sm text-muted-foreground">{module.description}</p>
-                      <Badge variant="outline" className="mt-2 text-xs">
-                        {module.status}
-                      </Badge>
+            <div className="space-y-3">
+              {modules.map((module) => {
+                const currentTier = getSubscriptionTier(module.moduleId)
+                return (
+                  <Card key={module.moduleId} className={`p-4 ${currentTier ? 'border-primary/50 bg-primary/5' : ''}`}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold">{module.name}</h3>
+                          {currentTier && (
+                            <Badge variant="default" className="text-xs">
+                              Aktiv: {currentTier}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{module.description}</p>
+                        <Badge variant="outline" className="mt-2 text-xs">
+                          {module.status}
+                        </Badge>
+                      </div>
+                      <div className="flex flex-col gap-2 items-end">
+                        <select
+                          value={currentTier || ''}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              handleModuleSubscription(module.moduleId, e.target.value)
+                            }
+                          }}
+                          className="px-3 py-2 border rounded-lg text-sm min-w-[140px]"
+                        >
+                          <option value="">Nicht aktiv</option>
+                          <option value="FREE">Free</option>
+                          <option value="STARTER">Starter</option>
+                          <option value="PRO">Pro</option>
+                          <option value="ENTERPRISE">Enterprise</option>
+                        </select>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <select
-                        defaultValue=""
-                        onChange={(e) => {
-                          if (e.target.value) {
-                            handleModuleSubscription(module.moduleId, e.target.value)
-                            e.target.value = ''
-                          }
-                        }}
-                        className="px-2 py-1 border rounded text-sm"
-                      >
-                        <option value="">Stufe waehlen</option>
-                        <option value="FREE">Free</option>
-                        <option value="STARTER">Starter</option>
-                        <option value="PRO">Pro</option>
-                        <option value="ENTERPRISE">Enterprise</option>
-                      </select>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                )
+              })}
             </div>
           )}
 
