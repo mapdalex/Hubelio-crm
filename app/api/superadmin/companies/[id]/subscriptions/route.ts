@@ -69,29 +69,36 @@ export async function PUT(
       )
     }
 
-    // Module existieren?
-    const module = await db.module.findUnique({
-      where: { moduleId },
+    // Module existieren? (moduleId kann entweder die UUID oder der Enum-Wert sein)
+    let module = await db.module.findUnique({
+      where: { id: moduleId },
     })
+
+    // Falls nicht gefunden, versuche mit moduleId (Enum-Wert wie CORE, MESSAGE etc.)
+    if (!module) {
+      module = await db.module.findUnique({
+        where: { moduleId: moduleId as any },
+      })
+    }
 
     if (!module) {
       return NextResponse.json(
-        { error: 'Modul nicht gefunden' },
+        { error: 'Modul nicht gefunden: ' + moduleId },
         { status: 404 }
       )
     }
 
-    // Subscription erstellen oder aktualisieren
+    // Subscription erstellen oder aktualisieren (verwende immer module.id)
     const subscription = await db.subscription.upsert({
       where: {
         companyId_moduleId: {
           companyId: id,
-          moduleId,
+          moduleId: module.id,
         },
       },
       create: {
         companyId: id,
-        moduleId,
+        moduleId: module.id,
         tier,
       },
       update: {
