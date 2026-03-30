@@ -26,12 +26,9 @@ services:
 
   # Next.js CRM Anwendung
   app:
-    image: ${CRM_APP_IMAGE:-hubelio-crm:latest}
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        DATABASE_URL: postgresql://${POSTGRES_USER:-crm_user}:${POSTGRES_PASSWORD:-change_me_in_production}@db:5432/${POSTGRES_DB:-crm_database}
     container_name: crm-app
     restart: unless-stopped
     depends_on:
@@ -41,7 +38,6 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-crm_user}:${POSTGRES_PASSWORD:-change_me_in_production}@db:5432/${POSTGRES_DB:-crm_database}
       AUTH_SECRET: ${AUTH_SECRET:-your-secret-key-change-in-production-min-32-chars}
       NODE_ENV: production
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       # Setze auf 'false' wenn du kein HTTPS verwendest (localhost/Docker ohne SSL)
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
     ports:
