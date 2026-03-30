@@ -126,7 +126,20 @@ export default function SuperadminPage() {
     adminName: '',
     adminEmail: '',
     adminPassword: '',
+    plan: 'FREE' as 'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE',
+    includedModules: [] as string[],
   })
+  
+  // Plan-Konfiguration
+  const PLAN_CONFIG = {
+    FREE: { label: 'Free', includedModules: 0, description: 'Nur Core-Modul' },
+    STARTER: { label: 'Starter', includedModules: 1, description: 'Core + 1 Modul nach Wahl' },
+    PRO: { label: 'Pro', includedModules: 2, description: 'Core + 2 Module nach Wahl' },
+    ENTERPRISE: { label: 'Enterprise', includedModules: 3, description: 'Core + 3 Module nach Wahl' },
+  }
+  
+  // Verfuegbare Module (ausser CORE)
+  const availableModules = modules.filter(m => m.moduleId !== 'CORE')
   
   const [showAddOwnerDialog, setShowAddOwnerDialog] = useState(false)
   const [selectedCompanyForOwner, setSelectedCompanyForOwner] = useState<Company | null>(null)
@@ -187,8 +200,17 @@ export default function SuperadminPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
+          companyName: formData.companyName,
+          companyEmail: formData.companyEmail,
+          companyPhone: formData.companyPhone,
+          companyAddress: formData.companyAddress,
+          companyWebsite: formData.companyWebsite,
+          adminName: formData.adminName,
+          adminEmail: formData.adminEmail,
+          adminPassword: formData.adminPassword,
           createNewUser: adminMode === 'new',
+          plan: formData.plan,
+          includedModules: formData.includedModules,
         }),
       })
       
@@ -210,6 +232,8 @@ export default function SuperadminPage() {
         adminName: '',
         adminEmail: '',
         adminPassword: '',
+        plan: 'FREE',
+        includedModules: [],
       })
       loadData()
     } catch (err) {
@@ -818,7 +842,7 @@ export default function SuperadminPage() {
 
       {/* Create Company Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Neue Firma erstellen</DialogTitle>
             <DialogDescription>
@@ -959,6 +983,89 @@ export default function SuperadminPage() {
                       Der Benutzer muss bereits im System vorhanden sein.
                     </p>
                   </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Plan-Auswahl */}
+            <div className="border-t pt-4 space-y-3">
+              <div>
+                <h4 className="font-medium flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Abo-Plan
+                </h4>
+                <p className="text-sm text-muted-foreground">
+                  Waehlen Sie den Plan fuer die Firma.
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2">
+                {(Object.entries(PLAN_CONFIG) as [keyof typeof PLAN_CONFIG, typeof PLAN_CONFIG[keyof typeof PLAN_CONFIG]][]).map(([planKey, config]) => (
+                  <button
+                    key={planKey}
+                    type="button"
+                    onClick={() => setFormData({ 
+                      ...formData, 
+                      plan: planKey as 'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE',
+                      includedModules: [] // Reset bei Plan-Wechsel
+                    })}
+                    className={`p-3 rounded-lg border text-left transition-colors ${
+                      formData.plan === planKey
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-muted-foreground/50'
+                    }`}
+                  >
+                    <div className="font-medium">{config.label}</div>
+                    <div className="text-xs text-muted-foreground">{config.description}</div>
+                  </button>
+                ))}
+              </div>
+              
+              {/* Modul-Auswahl wenn Plan > FREE */}
+              {PLAN_CONFIG[formData.plan].includedModules > 0 && (
+                <div className="space-y-2 mt-3">
+                  <Label>
+                    Module auswaehlen ({formData.includedModules.length}/{PLAN_CONFIG[formData.plan].includedModules})
+                  </Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {availableModules.map((mod) => {
+                      const isSelected = formData.includedModules.includes(mod.moduleId)
+                      const canSelect = isSelected || formData.includedModules.length < PLAN_CONFIG[formData.plan].includedModules
+                      
+                      return (
+                        <button
+                          key={mod.moduleId}
+                          type="button"
+                          disabled={!canSelect && !isSelected}
+                          onClick={() => {
+                            if (isSelected) {
+                              setFormData({
+                                ...formData,
+                                includedModules: formData.includedModules.filter(m => m !== mod.moduleId)
+                              })
+                            } else if (canSelect) {
+                              setFormData({
+                                ...formData,
+                                includedModules: [...formData.includedModules, mod.moduleId]
+                              })
+                            }
+                          }}
+                          className={`p-2 rounded-lg border text-left text-sm transition-colors ${
+                            isSelected
+                              ? 'border-primary bg-primary/5'
+                              : canSelect
+                              ? 'border-border hover:border-muted-foreground/50'
+                              : 'border-border opacity-50 cursor-not-allowed'
+                          }`}
+                        >
+                          <div className="font-medium">{mod.name}</div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Weitere Module koennen spaeter hinzugebucht werden.
+                  </p>
                 </div>
               )}
             </div>

@@ -54,6 +54,14 @@ export async function GET() {
   }
 }
 
+// Plan-Konfiguration: Wie viele Module sind im Plan inklusive (neben CORE)
+const PLAN_INCLUDED_MODULES: Record<string, number> = {
+  FREE: 0,      // Nur CORE
+  STARTER: 1,   // CORE + 1 Modul
+  PRO: 2,       // CORE + 2 Module
+  ENTERPRISE: 3, // CORE + 3 Module
+}
+
 // POST /api/superadmin/companies - Create company with admin (Superadmin only)
 export async function POST(request: NextRequest) {
   try {
@@ -77,6 +85,9 @@ export async function POST(request: NextRequest) {
       adminEmail,
       adminPassword,
       createNewUser = true, // If false, use existing user by email
+      // Plan selection
+      plan = 'FREE', // FREE, STARTER, PRO, ENTERPRISE
+      includedModules = [], // Module IDs die im Plan inklusive sind (z.B. ['MESSAGE', 'SALES'])
     } = await request.json()
     
     if (!companyName) {
@@ -160,7 +171,7 @@ export async function POST(request: NextRequest) {
         },
       })
       
-      // Subscribe to CORE module
+      // Subscribe to CORE module (always included)
       const coreModule = await tx.module.findUnique({
         where: { moduleId: 'CORE' },
       })
@@ -170,10 +181,37 @@ export async function POST(request: NextRequest) {
           data: {
             companyId: company.id,
             moduleId: coreModule.id,
-            tier: 'FREE',
+            tier: plan as 'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE',
             status: 'ACTIVE',
           },
         })
+      }
+      
+      // Subscribe to included modules based on plan
+      const maxIncludedModules = PLAN_INCLUDED_MODULES[plan] || 0
+      const modulesToInclude = (includedModules as string[]).slice(0, maxIncludedModules)
+      
+      if (modulesToInclude.length > 0) {
+        // Find all requested modules
+        const modulesData = await tx.module.findMany({
+          where: {
+            moduleId: {
+              in: modulesToInclude as any[],
+            },
+          },
+        })
+        
+        // Create subscriptions for each included module
+        for (const mod of modulesData) {
+          await tx.subscription.create({
+            data: {
+              companyId: company.id,
+              moduleId: mod.id,
+              tier: plan as 'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE',
+              status: 'ACTIVE',
+            },
+          })
+        }
       }
       
       // Log activity
