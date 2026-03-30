@@ -14,6 +14,12 @@ import {
   Building2,
   ChevronDown,
   User,
+  MessageSquare,
+  TrendingUp,
+  Share2,
+  Mail,
+  BarChart3,
+  Lock,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -44,66 +50,141 @@ import {
 } from '@/components/ui/collapsible'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useAuth } from '@/lib/auth-context'
+import { CompanySelector } from './company-selector'
+import type { ModuleId } from '@prisma/client'
 
-const mainNavItems = [
-  {
-    title: 'Dashboard',
-    url: '/dashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    title: 'Kunden',
-    url: '/customers',
-    icon: Users,
-    items: [
-      { title: 'Alle Kunden', url: '/customers' },
-      { title: 'Kontakte', url: '/customers/contacts' },
-      { title: 'PCs & Geraete', url: '/customers/computers' },
-    ],
-  },
-  {
-    title: 'Verkauf',
-    url: '/sales',
-    icon: ShoppingCart,
-    items: [
-      { title: 'Domains', url: '/sales/domains' },
-      { title: 'Services', url: '/sales/services' },
-    ],
-  },
-  {
-    title: 'Tickets',
-    url: '/tickets',
-    icon: Ticket,
-  },
-  {
-    title: 'Todos',
-    url: '/todos',
-    icon: CheckSquare,
-  },
-  {
-    title: 'Datenablage',
-    url: '/files',
-    icon: FolderOpen,
-  },
-]
+interface NavItem {
+  title: string
+  url: string
+  icon: React.ComponentType<{ className?: string }>
+  module?: ModuleId
+  items?: NavItem[]
+}
 
-const adminNavItems = [
+// Module-aware navigation items
+const getModuleNavItems = (accessibleModules: ModuleId[]): NavItem[] => {
+  const allItems: NavItem[] = [
+    {
+      title: 'Dashboard',
+      url: '/dashboard',
+      icon: LayoutDashboard,
+      module: 'CORE',
+    },
+    {
+      title: 'Kunden',
+      url: '/customers',
+      icon: Users,
+      module: 'CORE',
+      items: [
+        { title: 'Alle Kunden', url: '/customers', icon: Users, module: 'CORE' },
+        { title: 'Kontakte', url: '/customers/contacts', icon: User, module: 'CORE' },
+        { title: 'PCs & Geraete', url: '/customers/computers', icon: Building2, module: 'CORE' },
+      ],
+    },
+    {
+      title: 'Verkauf',
+      url: '/sales',
+      icon: ShoppingCart,
+      module: 'SALES',
+      items: [
+        { title: 'Domains', url: '/sales/domains', icon: ShoppingCart, module: 'SALES' },
+        { title: 'Services', url: '/sales/services', icon: ShoppingCart, module: 'SALES' },
+      ],
+    },
+    {
+      title: 'Tickets',
+      url: '/tickets',
+      icon: Ticket,
+      module: 'CORE',
+    },
+    {
+      title: 'Nachrichten',
+      url: '/messages',
+      icon: MessageSquare,
+      module: 'MESSAGE',
+      items: [
+        { title: 'Alle', url: '/messages', icon: MessageSquare, module: 'MESSAGE' },
+        { title: 'Posteingang', url: '/messages/inbox', icon: Mail, module: 'MESSAGE' },
+        { title: 'Entwuerfe', url: '/messages/drafts', icon: Mail, module: 'MESSAGE' },
+      ],
+    },
+    {
+      title: 'Soziale Medien',
+      url: '/socials',
+      icon: Share2,
+      module: 'SOCIALS',
+      items: [
+        { title: 'Accounts', url: '/socials/accounts', icon: Share2, module: 'SOCIALS' },
+        { title: 'Posts', url: '/socials/posts', icon: Share2, module: 'SOCIALS' },
+        { title: 'Analytics', url: '/socials/analytics', icon: BarChart3, module: 'SOCIALS' },
+      ],
+    },
+    {
+      title: 'Kampagnen',
+      url: '/campaigns',
+      icon: TrendingUp,
+      module: 'CAMPAIGNS',
+      items: [
+        { title: 'Alle', url: '/campaigns', icon: TrendingUp, module: 'CAMPAIGNS' },
+        { title: 'Erstellen', url: '/campaigns/create', icon: TrendingUp, module: 'CAMPAIGNS' },
+        { title: 'Berichte', url: '/campaigns/reports', icon: BarChart3, module: 'CAMPAIGNS' },
+      ],
+    },
+    {
+      title: 'Analytics',
+      url: '/analytics',
+      icon: BarChart3,
+      module: 'ANALYTICS',
+      items: [
+        { title: 'Dashboard', url: '/analytics', icon: BarChart3, module: 'ANALYTICS' },
+        { title: 'Reports', url: '/analytics/reports', icon: BarChart3, module: 'ANALYTICS' },
+        { title: 'Daten Export', url: '/analytics/export', icon: BarChart3, module: 'ANALYTICS' },
+      ],
+    },
+    {
+      title: 'Todos',
+      url: '/todos',
+      icon: CheckSquare,
+      module: 'CORE',
+    },
+    {
+      title: 'Datenablage',
+      url: '/files',
+      icon: FolderOpen,
+      module: 'CORE',
+    },
+  ]
+
+  // Filter items based on accessible modules
+  return allItems
+    .filter(item => !item.module || accessibleModules.includes(item.module) || item.module === 'CORE')
+    .map(item => ({
+      ...item,
+      items: item.items?.filter(
+        subItem => !subItem.module || accessibleModules.includes(subItem.module) || subItem.module === 'CORE'
+      ),
+    }))
+}
+
+const adminNavItems: NavItem[] = [
   {
     title: 'Einstellungen',
     url: '/settings',
     icon: Settings,
     items: [
-      { title: 'Allgemein', url: '/settings' },
-      { title: 'Benutzer', url: '/settings/users' },
-      { title: 'E-Mail', url: '/settings/email' },
-      { title: 'System', url: '/settings/system' },
+      { title: 'Allgemein', url: '/settings', icon: Settings },
+      { title: 'Unternehmen', url: '/settings/company', icon: Building2 },
+      { title: 'Module', url: '/settings/modules', icon: Lock },
+      { title: 'Benutzer', url: '/settings/users', icon: Users },
+      { title: 'E-Mail', url: '/settings/email', icon: Mail },
+      { title: 'System', url: '/settings/system', icon: Settings },
     ],
   },
 ]
 
 export function AppSidebar() {
   const pathname = usePathname()
-  const { user, logout } = useAuth()
+  const { user, logout, companyId, accessibleModules = [] } = useAuth()
   
   const isActive = (url: string) => {
     if (url === '/dashboard') return pathname === '/dashboard'
@@ -122,10 +203,13 @@ export function AppSidebar() {
   const isAdmin = user?.role === 'ADMIN'
   const isEmployee = ['ADMIN', 'MITARBEITER', 'BUCHHALTUNG'].includes(user?.role || '')
   
-  // Filtere Navigation basierend auf Rolle
-  const visibleNavItems = mainNavItems.filter(item => {
+  // Get module-aware navigation
+  const visibleNavItems = getModuleNavItems(accessibleModules as ModuleId[])
+  
+  // Filter based on role for customers
+  const filteredNavItems = visibleNavItems.filter(item => {
     if (user?.role === 'KUNDE') {
-      // Kunden sehen nur Dashboard, Tickets und Datenablage
+      // Customers see only Dashboard, Tickets and Files
       return ['Dashboard', 'Tickets', 'Datenablage'].includes(item.title)
     }
     return true
@@ -133,13 +217,16 @@ export function AppSidebar() {
   
   return (
     <Sidebar>
-      <SidebarHeader className="border-b">
-        <Link href="/dashboard" className="flex items-center gap-2 px-2 py-1">
+      <SidebarHeader className="border-b space-y-3 p-4">
+        <Link href="/dashboard" className="flex items-center gap-2 px-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <Building2 className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="font-semibold">CRM System</span>
+          <span className="font-semibold">Hublio CRM</span>
         </Link>
+        
+        {/* Company Selector */}
+        {companyId && <CompanySelector />}
       </SidebarHeader>
       
       <SidebarContent>
@@ -147,7 +234,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {visibleNavItems.map((item) => (
+              {filteredNavItems.map((item) => (
                 item.items ? (
                   <Collapsible
                     key={item.title}

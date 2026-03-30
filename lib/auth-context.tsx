@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Role } from '@prisma/client'
+import type { Role, CompanyRole, ModuleId } from '@prisma/client'
 
 type User = {
   id: string
@@ -11,12 +11,35 @@ type User = {
   role: Role
 }
 
+type Company = {
+  id: string
+  name: string
+  slug: string
+  logo?: string | null
+}
+
+type CompanyMembership = {
+  company: Company
+  role: CompanyRole
+  isDefault: boolean
+}
+
 type AuthContextType = {
   user: User | null
   isLoading: boolean
+  // Company context
+  currentCompany: Company | null
+  companyRole: CompanyRole | null
+  companies: CompanyMembership[]
+  accessibleModules: ModuleId[]
+  // Actions
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
   refresh: () => Promise<void>
+  switchCompany: (companyId: string) => Promise<{ success: boolean; error?: string }>
+  // Module access checks
+  hasModuleAccess: (moduleId: ModuleId) => boolean
+  canManageCompany: () => boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -24,15 +47,28 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [currentCompany, setCurrentCompany] = useState<Company | null>(null)
+  const [companyRole, setCompanyRole] = useState<CompanyRole | null>(null)
+  const [companies, setCompanies] = useState<CompanyMembership[]>([])
+  const [accessibleModules, setAccessibleModules] = useState<ModuleId[]>(['CORE'])
   const router = useRouter()
   
   const refresh = useCallback(async () => {
     try {
       const res = await fetch('/api/auth/session')
       const data = await res.json()
+      
       setUser(data.user || null)
+      setCurrentCompany(data.company || null)
+      setCompanyRole(data.companyRole || null)
+      setCompanies(data.companies || [])
+      setAccessibleModules(data.accessibleModules || ['CORE'])
     } catch {
       setUser(null)
+      setCurrentCompany(null)
+      setCompanyRole(null)
+      setCompanies([])
+      setAccessibleModules(['CORE'])
     } finally {
       setIsLoading(false)
     }
@@ -57,6 +93,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       setUser(data.user)
+      setCurrentCompany(data.company || null)
+      setCompanyRole(data.companyRole || null)
+      setCompanies(data.companies || [])
+      setAccessibleModules(data.accessibleModules || ['CORE'])
+      
       return { success: true }
     } catch {
       return { success: false, error: 'Verbindungsfehler' }
@@ -70,12 +111,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Ignore errors
     }
     setUser(null)
+    setCurrentCompany(null)
+    setCompanyRole(null)
+    setCompanies([])
+    setAccessibleModules(['CORE'])
     router.push('/login')
     router.refresh()
   }
   
+  const switchCompany = async (companyId: string) => {
+    try {
+      const res = await fetch('/api/auth/switch-company', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyId }),
+      })
+      
+      const data = await res.json()
+      
+      if (!res.ok) {
+        return { success: false, error: data.error }
+      }
+      
+      setCurrentCompany(data.company)
+      setCompanyRole(data.companyRole)
+      setAccessibleModules(data.accessibleModules || ['CORE'])
+      
+      // Refresh the page to reload data with new company context
+      router.refresh()
+      
+      return { success: true }
+    } catch {
+      return { success: false, error: 'Fehler beim Wechseln der Firma' }
+    }
+  }
+  
+  const hasModuleAccess = (moduleId: ModuleId): boolean => {
+    if (moduleId === 'CORE') return true
+    return accessibleModules.includes(moduleId)
+  }
+  
+  const canManageCompany = (): boolean => {
+    return companyRole === 'OWNER' || companyRole === 'ADMIN'
+  }
+  
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, refresh }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoading,
+        currentCompany,
+        companyRole,
+        companies,
+        accessibleModules,
+        login,
+        logout,
+        refresh,
+        switchCompany,
+        hasModuleAccess,
+        canManageCompany,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

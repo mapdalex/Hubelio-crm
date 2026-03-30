@@ -2,7 +2,7 @@ import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 import { db } from './db'
 import bcrypt from 'bcryptjs'
-import type { Role, User } from '@prisma/client'
+import type { Role, User, CompanyRole, ModuleId } from '@prisma/client'
 
 const secretKey = process.env.JWT_SECRET || 'fallback-secret-change-in-production'
 const key = new TextEncoder().encode(secretKey)
@@ -12,6 +12,11 @@ export type SessionPayload = {
   email: string
   name: string
   role: Role
+  // Multi-tenant fields
+  companyId?: string
+  companyName?: string
+  companyRole?: CompanyRole
+  accessibleModules?: ModuleId[]
   expiresAt: Date
 }
 
@@ -34,7 +39,15 @@ export async function decrypt(token: string): Promise<SessionPayload | null> {
   }
 }
 
-export async function createSession(user: Pick<User, 'id' | 'email' | 'name' | 'role'>): Promise<void> {
+export async function createSession(
+  user: Pick<User, 'id' | 'email' | 'name' | 'role'>,
+  companyContext?: {
+    companyId: string
+    companyName: string
+    companyRole: CompanyRole
+    accessibleModules: ModuleId[]
+  }
+): Promise<void> {
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 Tage
   
   const sessionPayload: SessionPayload = {
@@ -42,6 +55,11 @@ export async function createSession(user: Pick<User, 'id' | 'email' | 'name' | '
     email: user.email,
     name: user.name,
     role: user.role,
+    // Include company context if available
+    companyId: companyContext?.companyId,
+    companyName: companyContext?.companyName,
+    companyRole: companyContext?.companyRole,
+    accessibleModules: companyContext?.accessibleModules,
     expiresAt,
   }
   
@@ -142,4 +160,66 @@ export function isEmployee(role: Role): boolean {
 
 export function isCustomer(role: Role): boolean {
   return role === 'KUNDE'
+}
+
+// Get current user with company context
+export async function getCurrentUserWithCompany(): Promise<{
+  user: User
+  companyId?: string
+  companyRole?: CompanyRole
+} | null> {
+  const session = await getSession()
+  if (!session) return null
+  
+  const user = await db.user.findUnique({
+    where: { id: session.userId },
+  })
+  
+  if (!user) return null
+  
+  return {
+    user,
+    companyId: session.companyId,
+    companyRole: session.companyRole,
+  }
+}
+
+// Update session with new company context
+export async function updateSessionCompany(
+  userId: string,
+  companyContext: {
+    companyId: string
+    companyName: string
+    companyRole: CompanyRole
+    accessibleModules: ModuleId[]
+  }
+): Promise<void> {
+  const session = await getSession()
+  if (!session || session.userId !== userId) return
+  
+  // Get user data
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, name: true, role: true },
+  })
+  
+  if (!user) return
+  
+  // Delete old session
+  await deleteSession()
+  
+  // Create new session with company context
+  await createSession(user, companyContext)
+}
+
+// Check if user can access module
+export async function canAccessModule(moduleId: ModuleId): Promise<boolean> {
+  const session = await getSession()
+  if (!session) return false
+  
+  // CORE is always accessible
+  if (moduleId === 'CORE') return true
+  
+  // Check if module is in accessible modules
+  return session.accessibleModules?.includes(moduleId) || false
 }
