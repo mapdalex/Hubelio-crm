@@ -892,79 +892,115 @@ export default function SuperadminPage() {
                   <div className="space-y-4 border-t pt-4">
                     <h4 className="font-medium">Module fuer: {selectedCompanyForModules.name}</h4>
                     
-                    {/* CORE Modul mit Plan-Auswahl */}
-                    {modules.filter(m => m.moduleId === 'CORE').map((module) => {
-                      const currentTier = getSubscriptionTier(module.moduleId)
-                      return (
-                        <div key={module.moduleId} className="p-4 border rounded-lg bg-primary/5 border-primary">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold">{module.name}</h3>
-                                <Badge variant="default" className="text-xs">Basis-Modul</Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground">{module.description}</p>
-                            </div>
-                            <div className="flex flex-col gap-1 items-end">
-                              <Label className="text-xs text-muted-foreground">Abo-Plan</Label>
-                              <select
-                                value={currentTier || 'FREE'}
-                                onChange={(e) => handleModuleSubscription(module.moduleId, e.target.value)}
-                                className="px-3 py-2 border rounded-lg text-sm min-w-[160px] bg-background"
-                              >
-                                <option value="FREE">Free (0 Module)</option>
-                                <option value="STARTER">Starter (1 Modul)</option>
-                                <option value="PRO">Pro (2 Module)</option>
-                                <option value="ENTERPRISE">Enterprise (3 Module)</option>
-                              </select>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                    
-                    {/* Trennlinie */}
-                    <div className="pt-2">
-                      <h4 className="font-medium mb-2">Zusatzmodule</h4>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Als Superadmin koennen Sie beliebig viele Module aktivieren.
-                      </p>
+                    {/* Debug Info */}
+                    <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                      Module geladen: {modules.length} | Subscriptions: {companySubscriptions.length}
                     </div>
                     
-                    {/* Andere Module mit Checkbox */}
-                    <div className="grid gap-3">
-                      {modules.filter(m => m.moduleId !== 'CORE').map((module) => {
-                        const isActive = isModuleActive(module.moduleId)
-                        return (
-                          <div 
-                            key={module.moduleId} 
-                            className={`p-4 border rounded-lg ${isActive ? 'border-primary/50 bg-primary/5' : ''}`}
-                          >
-                            <div className="flex items-center gap-4">
-                              <input
-                                type="checkbox"
-                                id={`inline-module-${module.moduleId}`}
-                                checked={isActive}
-                                onChange={(e) => handleToggleModule(module.moduleId, e.target.checked)}
-                                className="h-5 w-5 rounded border-gray-300 cursor-pointer"
-                              />
-                              <label 
-                                htmlFor={`inline-module-${module.moduleId}`}
-                                className="flex-1 cursor-pointer"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-semibold">{module.name}</h3>
-                                  {isActive && (
-                                    <Badge variant="default" className="text-xs">Aktiv</Badge>
-                                  )}
+                    {modules.length === 0 ? (
+                      <div className="text-center py-4 text-muted-foreground">
+                        Keine Module verfuegbar. Bitte erstellen Sie zuerst Module.
+                      </div>
+                    ) : (
+                      <>
+                        {/* CORE Modul mit Plan-Auswahl */}
+                        {modules.filter(m => m.moduleId === 'CORE').map((module) => {
+                          const currentTier = getSubscriptionTier(module.moduleId)
+                          return (
+                            <div key={module.moduleId} className="p-4 border rounded-lg bg-primary/5 border-primary">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="font-semibold">{module.name}</h3>
+                                    <Badge variant="default" className="text-xs">Basis-Modul</Badge>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">{module.description}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">Aktueller Plan: {currentTier || 'Nicht gesetzt'}</p>
                                 </div>
-                                <p className="text-sm text-muted-foreground">{module.description}</p>
-                              </label>
+                                <div className="flex flex-col gap-1 items-end">
+                                  <Label className="text-xs text-muted-foreground">Abo-Plan</Label>
+                                  <select
+                                    value={currentTier || 'FREE'}
+                                    onChange={(e) => {
+                                      console.log('[v0] Select changed to:', e.target.value)
+                                      handleModuleSubscription(module.moduleId, e.target.value)
+                                    }}
+                                    className="px-3 py-2 border rounded-lg text-sm min-w-[160px] bg-background cursor-pointer"
+                                  >
+                                    <option value="FREE">Free (0 Module)</option>
+                                    <option value="STARTER">Starter (1 Modul)</option>
+                                    <option value="PRO">Pro (2 Module)</option>
+                                    <option value="ENTERPRISE">Enterprise (3 Module)</option>
+                                  </select>
+                                  <Button 
+                                    size="sm" 
+                                    className="mt-2"
+                                    onClick={() => handleModuleSubscription(module.moduleId, currentTier || 'FREE')}
+                                  >
+                                    Plan speichern
+                                  </Button>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        )
-                      })}
-                    </div>
+                          )
+                        })}
+                        
+                        {/* Trennlinie */}
+                        <div className="pt-2">
+                          <h4 className="font-medium mb-2">Zusatzmodule</h4>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Als Superadmin koennen Sie beliebig viele Module aktivieren.
+                          </p>
+                        </div>
+                        
+                        {/* Andere Module mit Checkbox */}
+                        <div className="grid gap-3">
+                          {modules.filter(m => m.moduleId !== 'CORE').map((module) => {
+                            const isActive = isModuleActive(module.moduleId)
+                            return (
+                              <div 
+                                key={module.moduleId} 
+                                className={`p-4 border rounded-lg ${isActive ? 'border-primary/50 bg-primary/5' : ''}`}
+                              >
+                                <div className="flex items-center justify-between gap-4">
+                                  <div className="flex items-center gap-4 flex-1">
+                                    <input
+                                      type="checkbox"
+                                      id={`inline-module-${module.moduleId}`}
+                                      checked={isActive}
+                                      onChange={(e) => {
+                                        console.log('[v0] Checkbox changed:', module.moduleId, e.target.checked)
+                                        handleToggleModule(module.moduleId, e.target.checked)
+                                      }}
+                                      className="h-5 w-5 rounded border-gray-300 cursor-pointer"
+                                    />
+                                    <label 
+                                      htmlFor={`inline-module-${module.moduleId}`}
+                                      className="flex-1 cursor-pointer"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <h3 className="font-semibold">{module.name}</h3>
+                                        {isActive && (
+                                          <Badge variant="default" className="text-xs">Aktiv</Badge>
+                                        )}
+                                      </div>
+                                      <p className="text-sm text-muted-foreground">{module.description}</p>
+                                    </label>
+                                  </div>
+                                  <Button 
+                                    size="sm" 
+                                    variant={isActive ? "destructive" : "default"}
+                                    onClick={() => handleToggleModule(module.moduleId, !isActive)}
+                                  >
+                                    {isActive ? 'Deaktivieren' : 'Aktivieren'}
+                                  </Button>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
