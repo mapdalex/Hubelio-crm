@@ -32,6 +32,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import { 
   Building2, 
   Users, 
@@ -112,7 +120,6 @@ export default function SuperadminPage() {
   const [editingCompany, setEditingCompany] = useState<Company | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [selectedCompanyForModules, setSelectedCompanyForModules] = useState<Company | null>(null)
-  const [showModulesDialog, setShowModulesDialog] = useState(false)
   const [companySubscriptions, setCompanySubscriptions] = useState<any[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
@@ -369,12 +376,7 @@ export default function SuperadminPage() {
     }
   }
   
-  const openModulesDialog = (company: Company) => {
-    setSelectedCompanyForModules(company)
-    loadCompanySubscriptions(company.id)
-    setShowModulesDialog(true)
-  }
-  
+
   const getSubscriptionTier = (moduleId: string): string => {
     const sub = companySubscriptions.find(s => s.module?.moduleId === moduleId)
     return sub?.tier || ''
@@ -867,10 +869,11 @@ export default function SuperadminPage() {
               <div className="space-y-6">
                 <div>
                   <Label className="mb-2 block">Firma auswaehlen</Label>
-                  <select
+                  <Select
                     value={selectedCompanyForModules?.id || ''}
-                    onChange={(e) => {
-                      const company = companies.find(c => c.id === e.target.value)
+                    onValueChange={(value) => {
+                      console.log('[v0] Company select changed to:', value)
+                      const company = companies.find(c => c.id === value)
                       if (company) {
                         setSelectedCompanyForModules(company)
                         loadCompanySubscriptions(company.id)
@@ -879,13 +882,19 @@ export default function SuperadminPage() {
                         setCompanySubscriptions([])
                       }
                     }}
-                    className="w-full px-3 py-2 border rounded-lg bg-background"
                   >
-                    <option value="">-- Waehlen Sie eine Firma --</option>
-                    {companies.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="-- Waehlen Sie eine Firma --" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Verfuegbare Firmen: {companies.length}
+                  </p>
                 </div>
   
                 {selectedCompanyForModules && (
@@ -919,19 +928,23 @@ export default function SuperadminPage() {
                                 </div>
                                 <div className="flex flex-col gap-1 items-end">
                                   <Label className="text-xs text-muted-foreground">Abo-Plan</Label>
-                                  <select
+                                  <Select
                                     value={currentTier || 'FREE'}
-                                    onChange={(e) => {
-                                      console.log('[v0] Select changed to:', e.target.value)
-                                      handleModuleSubscription(module.moduleId, e.target.value)
+                                    onValueChange={(value) => {
+                                      console.log('[v0] Select changed to:', value)
+                                      handleModuleSubscription(module.moduleId, value)
                                     }}
-                                    className="px-3 py-2 border rounded-lg text-sm min-w-[160px] bg-background cursor-pointer"
                                   >
-                                    <option value="FREE">Free (0 Module)</option>
-                                    <option value="STARTER">Starter (1 Modul)</option>
-                                    <option value="PRO">Pro (2 Module)</option>
-                                    <option value="ENTERPRISE">Enterprise (3 Module)</option>
-                                  </select>
+                                    <SelectTrigger className="min-w-[160px]">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="FREE">Free (0 Module)</SelectItem>
+                                      <SelectItem value="STARTER">Starter (1 Modul)</SelectItem>
+                                      <SelectItem value="PRO">Pro (2 Module)</SelectItem>
+                                      <SelectItem value="ENTERPRISE">Enterprise (3 Module)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
                                   <Button 
                                     size="sm" 
                                     className="mt-2"
@@ -964,15 +977,14 @@ export default function SuperadminPage() {
                               >
                                 <div className="flex items-center justify-between gap-4">
                                   <div className="flex items-center gap-4 flex-1">
-                                    <input
-                                      type="checkbox"
+                                    <Checkbox
                                       id={`inline-module-${module.moduleId}`}
                                       checked={isActive}
-                                      onChange={(e) => {
-                                        console.log('[v0] Checkbox changed:', module.moduleId, e.target.checked)
-                                        handleToggleModule(module.moduleId, e.target.checked)
+                                      onCheckedChange={(checked) => {
+                                        console.log('[v0] Checkbox changed:', module.moduleId, checked)
+                                        handleToggleModule(module.moduleId, !!checked)
                                       }}
-                                      className="h-5 w-5 rounded border-gray-300 cursor-pointer"
+                                      className="h-5 w-5"
                                     />
                                     <label 
                                       htmlFor={`inline-module-${module.moduleId}`}
