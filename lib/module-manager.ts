@@ -270,6 +270,80 @@ export async function getUserAccessibleModules(
   return [ModuleId.CORE, ...permittedModules]
 }
 
+// Type for module permission details
+export type ModulePermissionDetail = {
+  moduleId: ModuleId
+  canAccess: boolean
+  canEdit: boolean
+  canAdmin: boolean
+}
+
+// Get user's module permissions with edit rights within a company
+export async function getUserModulePermissions(
+  userId: string,
+  companyId: string
+): Promise<ModulePermissionDetail[]> {
+  const companyUser = await db.companyUser.findUnique({
+    where: {
+      userId_companyId: { userId, companyId },
+    },
+    include: {
+      modulePermissions: true,
+      company: {
+        include: {
+          subscriptions: {
+            where: {
+              status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL] },
+            },
+            include: { module: true },
+          },
+        },
+      },
+    },
+  })
+
+  if (!companyUser) {
+    return [{ moduleId: ModuleId.CORE, canAccess: true, canEdit: false, canAdmin: false }]
+  }
+
+  // Company owners, admins and managers have full access to all subscribed modules
+  if (companyUser.role === CompanyRole.OWNER || companyUser.role === CompanyRole.ADMIN || companyUser.role === CompanyRole.MANAGER) {
+    const subscribedModules = companyUser.company.subscriptions.map(
+      (sub) => sub.module.moduleId
+    )
+    return [
+      { moduleId: ModuleId.CORE, canAccess: true, canEdit: true, canAdmin: companyUser.role !== CompanyRole.MANAGER },
+      ...subscribedModules.map((moduleId) => ({
+        moduleId,
+        canAccess: true,
+        canEdit: true,
+        canAdmin: companyUser.role !== CompanyRole.MANAGER,
+      })),
+    ]
+  }
+
+  // MEMBER and VIEWER: use explicit permissions
+  // CORE module: MEMBER can edit, VIEWER cannot
+  const corePermission: ModulePermissionDetail = {
+    moduleId: ModuleId.CORE,
+    canAccess: true,
+    canEdit: companyUser.role === CompanyRole.MEMBER,
+    canAdmin: false,
+  }
+
+  // Other modules based on explicit permissions
+  const modulePermissions: ModulePermissionDetail[] = companyUser.modulePermissions
+    .filter((p) => p.canAccess)
+    .map((p) => ({
+      moduleId: p.moduleId,
+      canAccess: p.canAccess,
+      canEdit: p.canEdit,
+      canAdmin: p.canAdmin,
+    }))
+
+  return [corePermission, ...modulePermissions]
+}
+
 // Check if a feature is available
 export function hasFeature(moduleId: ModuleId, feature: string): boolean {
   return MODULE_FEATURES[moduleId]?.includes(feature) || false

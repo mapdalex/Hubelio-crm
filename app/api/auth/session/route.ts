@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { getCompanyContext, getUserCompanies } from '@/lib/multi-tenant'
-import { getUserAccessibleModules } from '@/lib/module-manager'
+import { getUserAccessibleModules, getUserModulePermissions, type ModulePermissionDetail } from '@/lib/module-manager'
 
 export async function GET() {
   try {
@@ -29,6 +29,7 @@ export async function GET() {
     let company = null
     let companyRole = null
     let accessibleModules = ['CORE'] as string[]
+    let modulePermissions: ModulePermissionDetail[] = [{ moduleId: 'CORE' as const, canAccess: true, canEdit: false, canAdmin: false }]
     
     if (session.companyId) {
       const companyContext = await getCompanyContext(session.userId, session.companyId)
@@ -41,6 +42,10 @@ export async function GET() {
         }
         companyRole = companyContext.role
         accessibleModules = await getUserAccessibleModules(
+          session.userId,
+          companyContext.company.id
+        )
+        modulePermissions = await getUserModulePermissions(
           session.userId,
           companyContext.company.id
         )
@@ -61,6 +66,10 @@ export async function GET() {
           session.userId,
           companyContext.company.id
         )
+        modulePermissions = await getUserModulePermissions(
+          session.userId,
+          companyContext.company.id
+        )
       }
     }
     
@@ -75,6 +84,7 @@ export async function GET() {
       companyRole,
       companies,
       accessibleModules,
+      modulePermissions,
     })
   } catch (error) {
     console.error('Session error:', error)
