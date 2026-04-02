@@ -148,14 +148,20 @@ export default function UsersSettingsPage() {
     
     try {
       const res = await fetch(`/api/companies/${currentCompany.id}/subscriptions`)
+      console.log('[v0] Subscriptions API response status:', res.status)
       if (res.ok) {
         // Die API gibt das Array direkt zurueck (kein Wrapper-Objekt)
         const data = await res.json()
+        console.log('[v0] Subscriptions raw data:', data)
         const subscriptionsArray = Array.isArray(data) ? data : (data.subscriptions ?? [])
+        console.log('[v0] Subscriptions array:', subscriptionsArray)
         const activeModules = subscriptionsArray
           .filter((sub: { status: string }) => sub.status === 'ACTIVE' || sub.status === 'TRIAL')
           .map((sub: { module: CompanyModule }) => sub.module)
+        console.log('[v0] Active modules:', activeModules)
         setCompanyModules(activeModules)
+      } else {
+        console.log('[v0] Subscriptions API error:', await res.text())
       }
     } catch (error) {
       console.error('Error loading company modules:', error)
