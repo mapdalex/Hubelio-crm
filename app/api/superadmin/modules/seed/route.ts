@@ -88,6 +88,26 @@ export async function POST() {
         status: 'ACTIVE',
         sortOrder: 7,
       },
+      {
+        moduleId: 'FINANCE',
+        name: 'Finanzen',
+        description: 'Buchhaltung, Rechnungen, Ausgaben, Finanzberichte',
+        icon: 'Landmark',
+        features: ['accounting', 'invoices', 'expenses', 'finance_reports', 'tax'],
+        basePrice: 199,
+        status: 'ACTIVE',
+        sortOrder: 8,
+      },
+      {
+        moduleId: 'RENT',
+        name: 'Vermietung',
+        description: 'Mietverwaltung, Mietvertraege, Objekte, Mieterkommunikation',
+        icon: 'Home',
+        features: ['properties', 'rental_contracts', 'tenants', 'rent_tracking', 'maintenance'],
+        basePrice: 179,
+        status: 'ACTIVE',
+        sortOrder: 9,
+      },
     ]
 
     // Upsert alle Module
