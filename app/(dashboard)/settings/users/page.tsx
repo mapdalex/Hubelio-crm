@@ -147,7 +147,9 @@ export default function UsersSettingsPage() {
     if (!currentCompany?.id) return
     
     try {
-      const res = await fetch(`/api/companies/${currentCompany.id}/subscriptions`)
+      const res = await fetch(`/api/companies/${currentCompany.id}/subscriptions`, {
+        credentials: 'include'
+      })
       console.log('[v0] Subscriptions API response status:', res.status)
       if (res.ok) {
         // Die API gibt das Array direkt zurueck (kein Wrapper-Objekt)
