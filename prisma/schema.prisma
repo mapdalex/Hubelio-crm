@@ -45,6 +45,13 @@ model User {
   customer       Customer?       @relation("CustomerUser")
   activityLogs   ActivityLog[]
   companyUsers   CompanyUser[]   // Multi-company membership
+  
+  // Kalender-Beziehungen
+  calendars          Calendar[]          @relation("UserCalendars")
+  createdEvents      CalendarEvent[]     @relation("UserCreatedEvents")
+  sharedCalendars    CalendarShare[]     @relation("SharedCalendars")
+  calendarVisibility CalendarVisibility[] @relation("UserCalendarVisibility")
+  eventAttendances   EventAttendee[]     @relation("EventAttendances")
 
   @@index([email])
   @@index([role])
@@ -440,6 +447,7 @@ model Company {
   todos         Todo[]         @relation("CompanyTodos")
   activityLogs  ActivityLog[]
   emailSettings EmailSettings[] @relation("CompanyEmailSettings")
+  calendars     Calendar[]     @relation("CompanyCalendars")
 
   @@index([slug])
   @@index([isActive])
@@ -563,4 +571,127 @@ model ModulePermission {
   @@unique([companyUserId, moduleId])
   @@index([companyUserId])
   @@index([moduleId])
+}
+
+// ============================================
+// KALENDER
+// ============================================
+
+enum CalendarType {
+  PERSONAL    // Persoenlicher Kalender des Users
+  COMPANY     // Firmenkalender
+  VACATION    // Urlaubskalender
+  SHARED      // Geteilter Kalender
+}
+
+enum CalendarEventType {
+  EVENT       // Normales Event
+  VACATION    // Urlaubseintrag
+  MEETING     // Besprechung
+  REMINDER    // Erinnerung
+  TASK        // Aufgabe
+  BIRTHDAY    // Geburtstag
+  HOLIDAY     // Feiertag
+}
+
+model Calendar {
+  id          String       @id @default(cuid())
+  companyId   String?      // Multi-tenant
+  ownerId     String?      // User der den Kalender besitzt (null = Firmenkalender)
+  name        String
+  description String?
+  color       String       @default("#3b82f6") // Hex color fuer Events
+  type        CalendarType @default(PERSONAL)
+  isDefault   Boolean      @default(false)
+  isPublic    Boolean      @default(false) // Sichtbar fuer alle Firmenmitglieder
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  ownerCompany Company?          @relation("CompanyCalendars", fields: [companyId], references: [id])
+  owner        User?             @relation("UserCalendars", fields: [ownerId], references: [id])
+  events       CalendarEvent[]
+  shares       CalendarShare[]
+  visibility   CalendarVisibility[]
+
+  @@index([companyId])
+  @@index([ownerId])
+  @@index([type])
+}
+
+model CalendarEvent {
+  id             String            @id @default(cuid())
+  calendarId     String
+  title          String
+  description    String?
+  location       String?
+  eventType      CalendarEventType @default(EVENT)
+  startDate      DateTime
+  endDate        DateTime
+  allDay         Boolean           @default(false)
+  isRecurring    Boolean           @default(false)
+  recurrenceRule String?           // RRULE Format (z.B. "FREQ=WEEKLY;BYDAY=MO,WE,FR")
+  color          String?           // Ueberschreibt Kalenderfarbe
+  createdById    String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  // Relations
+  calendar  Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  createdBy User     @relation("UserCreatedEvents", fields: [createdById], references: [id])
+  attendees EventAttendee[]
+
+  @@index([calendarId])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([createdById])
+}
+
+model CalendarShare {
+  id         String   @id @default(cuid())
+  calendarId String
+  userId     String
+  canEdit    Boolean  @default(false) // Nur lesen oder auch bearbeiten
+  createdAt  DateTime @default(now())
+
+  // Relations
+  calendar Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  user     User     @relation("SharedCalendars", fields: [userId], references: [id])
+
+  @@unique([calendarId, userId])
+  @@index([calendarId])
+  @@index([userId])
+}
+
+model CalendarVisibility {
+  id         String   @id @default(cuid())
+  userId     String
+  calendarId String
+  isVisible  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  user     User     @relation("UserCalendarVisibility", fields: [userId], references: [id])
+  calendar Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, calendarId])
+  @@index([userId])
+  @@index([calendarId])
+}
+
+model EventAttendee {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  status    String   @default("pending") // pending, accepted, declined, tentative
+  createdAt DateTime @default(now())
+
+  // Relations
+  event CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User          @relation("EventAttendances", fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
 }

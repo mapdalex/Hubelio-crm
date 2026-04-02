@@ -23,6 +23,7 @@ import {
   Monitor,
   Globe,
   Shield,
+  CalendarDays,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -81,6 +82,7 @@ const getModuleNavItems = (accessibleModules: ModuleId[]): NavItem[] => {
       items: [
         { title: 'Kunden', url: '/customers', icon: Users, module: 'CORE' },
         { title: 'Kontakte', url: '/customers/contacts', icon: User, module: 'CORE' },
+        { title: 'Kalender', url: '/calendar', icon: CalendarDays, module: 'CORE' },
         { title: 'Todos', url: '/todos', icon: CheckSquare, module: 'CORE' },
       ],
     },
