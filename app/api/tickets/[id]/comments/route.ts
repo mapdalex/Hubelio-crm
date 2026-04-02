@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getSession, isEmployee } from '@/lib/auth'
+import { getSession, canEditInCompany } from '@/lib/auth'
 
 export async function POST(
   request: NextRequest,
@@ -21,8 +21,8 @@ export async function POST(
       return NextResponse.json({ error: 'Ticket nicht gefunden' }, { status: 404 })
     }
     
-    // Pruefen ob Benutzer Zugriff hat
-    const isEmp = isEmployee(session.role)
+    // Pruefen ob Benutzer Zugriff hat (entweder als Mitarbeiter oder als Kunde des Tickets)
+    const isEmp = canEditInCompany(session)
     if (!isEmp) {
       const customer = await db.customer.findFirst({
         where: { userId: session.userId },

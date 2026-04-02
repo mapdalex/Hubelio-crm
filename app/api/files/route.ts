@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getSession, isEmployee } from '@/lib/auth'
+import { getSession, canViewInCompany, canEditInCompany } from '@/lib/auth'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const where: any = {}
     
     // Multi-tenant filter: Files über companyId filtern
-    if (isEmployee(session.role)) {
+    if (canViewInCompany(session)) {
       if (session.role !== 'SUPERADMIN' && session.companyId) {
         where.companyId = session.companyId
       } else if (session.role === 'SUPERADMIN' && session.companyId) {
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession()
-    if (!session || !isEmployee(session.role)) {
+    if (!canEditInCompany(session)) {
       return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
 

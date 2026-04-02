@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getSession, isEmployee } from '@/lib/auth'
+import { getSession, canViewInCompany } from '@/lib/auth'
 
 // GET: Suche nach Usern in der Firma (fuer Kalender-Freigabe)
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession()
-    if (!session || !isEmployee(session.role)) {
+    if (!canViewInCompany(session)) {
       return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
 

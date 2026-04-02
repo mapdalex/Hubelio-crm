@@ -166,6 +166,40 @@ export function isCustomer(role: Role): boolean {
   return role === 'KUNDE'
 }
 
+// Check if session can edit data within company (based on company role OR global employee role)
+export function canEditInCompany(session: SessionPayload | null): boolean {
+  if (!session) return false
+  
+  // SUPERADMIN can always edit
+  if (session.role === 'SUPERADMIN') return true
+  
+  // Check company role if available (Multi-Tenant)
+  if (session.companyRole) {
+    // OWNER, ADMIN, MANAGER, MEMBER can edit, VIEWER cannot
+    return ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER'].includes(session.companyRole)
+  }
+  
+  // Fallback to global role check for legacy compatibility
+  return isEmployee(session.role)
+}
+
+// Check if session can view data within company (based on company role OR global employee role)
+export function canViewInCompany(session: SessionPayload | null): boolean {
+  if (!session) return false
+  
+  // SUPERADMIN can always view
+  if (session.role === 'SUPERADMIN') return true
+  
+  // Check company role if available (Multi-Tenant)
+  if (session.companyRole) {
+    // All company roles can view
+    return ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER', 'VIEWER'].includes(session.companyRole)
+  }
+  
+  // Fallback to global role check for legacy compatibility
+  return isEmployee(session.role)
+}
+
 // Get current user with company context
 export async function getCurrentUserWithCompany(): Promise<{
   user: User

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getSession } from '@/lib/auth'
+import { getSession, canViewInCompany, canEditInCompany } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || 'all'
     const priority = searchParams.get('priority') || 'all'
     
-    const isEmployee = ['ADMIN', 'MITARBEITER', 'BUCHHALTUNG', 'SUPERADMIN'].includes(session.role)
+    const isEmployee = canViewInCompany(session)
     
     const where: any = {}
     
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
     
     const ticketNumber = `${prefix}${nextNumber.toString().padStart(6, '0')}`
     
-    const isEmployee = ['ADMIN', 'MITARBEITER', 'BUCHHALTUNG'].includes(session.role)
+    const isEmployee = canEditInCompany(session)
     
     // Wenn Kunde, dann customerId aus User holen
     let customerId = data.customerId
