@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     const session = await getSession()
-    if (!session?.user) {
+    if (!session?.userId) {
       return NextResponse.json(
         { error: 'Authentifizierung erforderlich' },
         { status: 401 }
@@ -21,7 +21,7 @@ export async function GET(
     const companyUser = await db.companyUser.findUnique({
       where: {
         userId_companyId: {
-          userId: session.user.id,
+          userId: session.userId,
           companyId: id,
         },
       },
