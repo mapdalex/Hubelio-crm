@@ -52,6 +52,10 @@ model User {
   sharedCalendars    CalendarShare[]     @relation("SharedCalendars")
   calendarVisibility CalendarVisibility[] @relation("UserCalendarVisibility")
   eventAttendances   EventAttendee[]     @relation("EventAttendances")
+  
+  // Antraege-Beziehungen
+  requests           Request[]           @relation("UserRequests")
+  approvedRequests   Request[]           @relation("UserApprovedRequests")
 
   @@index([email])
   @@index([role])
@@ -448,6 +452,7 @@ model Company {
   activityLogs  ActivityLog[]
   emailSettings EmailSettings[] @relation("CompanyEmailSettings")
   calendars     Calendar[]     @relation("CompanyCalendars")
+  requests      Request[]      @relation("CompanyRequests")
 
   @@index([slug])
   @@index([isActive])
@@ -640,6 +645,7 @@ model CalendarEvent {
   calendar  Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
   createdBy User     @relation("UserCreatedEvents", fields: [createdById], references: [id])
   attendees EventAttendee[]
+  requests  Request[]      // Verknuepfte Antraege (z.B. Urlaubsantraege)
 
   @@index([calendarId])
   @@index([startDate])
@@ -694,4 +700,65 @@ model EventAttendee {
   @@unique([eventId, userId])
   @@index([eventId])
   @@index([userId])
+}
+
+// ============================================
+// ANTRAEGE (REQUESTS)
+// ============================================
+
+enum RequestType {
+  VACATION         // Urlaub
+  SPECIAL_LEAVE    // Sonderurlaub
+  MEETING          // Meeting-Anfrage
+  HOME_OFFICE      // Home Office
+  BUSINESS_TRIP    // Dienstreise
+  TRAINING         // Weiterbildung
+  OTHER            // Sonstiges
+}
+
+enum RequestStatus {
+  PENDING          // Wartet auf Genehmigung
+  APPROVED         // Genehmigt
+  REJECTED         // Abgelehnt
+  CANCELLED        // Storniert
+}
+
+model Request {
+  id              String        @id @default(cuid())
+  requestNumber   String        @unique
+  companyId       String?       // Multi-tenant
+  requesterId     String        // Antragsteller
+  type            RequestType
+  status          RequestStatus @default(PENDING)
+  
+  // Zeitraum (fuer Urlaub, Home Office, etc.)
+  startDate       DateTime?
+  endDate         DateTime?
+  
+  // Details
+  title           String
+  description     String?
+  
+  // Genehmigung
+  approvedById    String?       // Wer hat genehmigt/abgelehnt
+  approvedAt      DateTime?
+  approvalComment String?       // Kommentar bei Genehmigung/Ablehnung
+  
+  // Kalender-Integration
+  calendarEventId String?       // Verknuepfung zum Kalendereintrag (nach Genehmigung)
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  ownerCompany    Company?      @relation("CompanyRequests", fields: [companyId], references: [id])
+  requester       User          @relation("UserRequests", fields: [requesterId], references: [id])
+  approvedBy      User?         @relation("UserApprovedRequests", fields: [approvedById], references: [id])
+  calendarEvent   CalendarEvent? @relation(fields: [calendarEventId], references: [id])
+
+  @@index([companyId])
+  @@index([requesterId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
 }
