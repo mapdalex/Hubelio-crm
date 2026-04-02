@@ -59,7 +59,7 @@ const PLAN_INCLUDED_MODULES: Record<string, number> = {
   FREE: 0,      // Nur CORE
   STARTER: 1,   // CORE + 1 Modul
   PRO: 2,       // CORE + 2 Module
-  ENTERPRISE: 3, // CORE + 3 Module
+  ENTERPRISE: 999, // CORE + alle Module
 }
 
 // POST /api/superadmin/companies - Create company with admin (Superadmin only)
