@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession, updateSessionCompany } from '@/lib/auth'
 import { switchCompany } from '@/lib/multi-tenant'
-import { getUserAccessibleModules } from '@/lib/module-manager'
+import { getUserAccessibleModules, getUserModulePermissions } from '@/lib/module-manager'
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,6 +39,12 @@ export async function POST(request: NextRequest) {
       companyId
     )
     
+    // Get module permissions for new company
+    const modulePermissions = await getUserModulePermissions(
+      session.userId,
+      companyId
+    )
+    
     // Update session with new company context
     await updateSessionCompany(session.userId, {
       companyId: companyContext.company.id,
@@ -56,6 +62,7 @@ export async function POST(request: NextRequest) {
       },
       companyRole: companyContext.role,
       accessibleModules,
+      modulePermissions,
     })
   } catch (error) {
     console.error('Switch company error:', error)
