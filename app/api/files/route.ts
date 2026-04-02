@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getCurrentUser } from '@/lib/auth'
+import { getSession, isEmployee } from '@/lib/auth'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
+    const session = await getSession()
+    if (!session) {
       return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
 
@@ -16,7 +16,27 @@ export async function GET(request: NextRequest) {
     const ticketId = searchParams.get('ticketId')
     const folderId = searchParams.get('folderId')
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = {}
+    
+    // Multi-tenant filter: Files über companyId filtern
+    if (isEmployee(session.role)) {
+      if (session.role !== 'SUPERADMIN' && session.companyId) {
+        where.companyId = session.companyId
+      } else if (session.role === 'SUPERADMIN' && session.companyId) {
+        where.companyId = session.companyId
+      }
+    } else {
+      // Kunden sehen nur ihre eigenen Files
+      const customer = await db.customer.findFirst({
+        where: { userId: session.userId }
+      })
+      if (customer) {
+        where.customerId = customer.id
+      } else {
+        return NextResponse.json([])
+      }
+    }
     
     if (customerId) {
       where.customerId = customerId
@@ -55,8 +75,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
+    const session = await getSession()
+    if (!session || !isEmployee(session.role)) {
       return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
 
@@ -85,17 +105,18 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes)
     await writeFile(filePath, buffer)
 
-    // Erstelle Datenbank-Eintrag
+    // Erstelle Datenbank-Eintrag mit companyId für Multi-Tenant
     const newFile = await db.file.create({
       data: {
-        name: file.name,
+        filename: file.name,
+        originalName: file.name,
         path: `/uploads/${fileName}`,
         size: file.size,
         mimeType: file.type,
-        uploadedById: user.id,
+        companyId: session.companyId || null, // Multi-tenant
+        uploadedById: session.userId,
         customerId: customerId || null,
         ticketId: ticketId || null,
-        folderId: folderId || null
       },
       include: {
         uploadedBy: {

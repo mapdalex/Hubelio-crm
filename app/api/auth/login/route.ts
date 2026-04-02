@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { createSession, verifyPassword } from '@/lib/auth'
+import { getCompanyContext } from '@/lib/multi-tenant'
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,8 +44,57 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Session erstellen
-    await createSession(user)
+    // Company-Kontext laden (Multi-Tenant)
+    // SUPERADMIN kann ohne Company arbeiten, andere brauchen eine Firma
+    let companyContext = undefined
+    if (user.role !== 'SUPERADMIN') {
+      const ctx = await getCompanyContext(user.id)
+      if (ctx) {
+        // Lade die zugänglichen Module für diese Firma
+        const subscriptions = await db.subscription.findMany({
+          where: {
+            companyId: ctx.company.id,
+            status: 'ACTIVE',
+          },
+          include: {
+            module: true,
+          },
+        })
+        const accessibleModules = subscriptions.map((s) => s.module.moduleId)
+        
+        companyContext = {
+          companyId: ctx.company.id,
+          companyName: ctx.company.name,
+          companyRole: ctx.role,
+          accessibleModules,
+        }
+      }
+    } else {
+      // SUPERADMIN: Prüfe ob eine Firma ausgewählt ist (optional)
+      const ctx = await getCompanyContext(user.id)
+      if (ctx) {
+        const subscriptions = await db.subscription.findMany({
+          where: {
+            companyId: ctx.company.id,
+            status: 'ACTIVE',
+          },
+          include: {
+            module: true,
+          },
+        })
+        const accessibleModules = subscriptions.map((s) => s.module.moduleId)
+        
+        companyContext = {
+          companyId: ctx.company.id,
+          companyName: ctx.company.name,
+          companyRole: ctx.role,
+          accessibleModules,
+        }
+      }
+    }
+    
+    // Session erstellen mit Company-Kontext
+    await createSession(user, companyContext)
     
     // Aktivitaetslog
     await db.activityLog.create({

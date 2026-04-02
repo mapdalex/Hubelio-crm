@@ -17,6 +17,15 @@ export async function GET(request: NextRequest) {
     
     const where: any = {}
     
+    // Multi-tenant filter: Services über Customer->companyId filtern
+    // SUPERADMIN kann alle sehen, andere nur ihre Firma
+    if (session.role !== 'SUPERADMIN' && session.companyId) {
+      where.customer = { companyId: session.companyId }
+    } else if (session.role === 'SUPERADMIN' && session.companyId) {
+      // SUPERADMIN mit ausgewählter Firma - zeige nur Services dieser Firma
+      where.customer = { companyId: session.companyId }
+    }
+    
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
