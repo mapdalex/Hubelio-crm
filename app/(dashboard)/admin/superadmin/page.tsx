@@ -378,7 +378,10 @@ export default function SuperadminPage() {
   
 
   const getSubscriptionTier = (moduleId: string): string => {
-    const sub = companySubscriptions.find(s => s.module?.moduleId === moduleId)
+    // Pruefe sowohl module.moduleId (Enum wie CORE) als auch moduleId (interne ID)
+    const sub = companySubscriptions.find(s => 
+      s.module?.moduleId === moduleId || s.moduleId === moduleId
+    )
     return sub?.tier || ''
   }
   
@@ -387,7 +390,16 @@ export default function SuperadminPage() {
   }
   
   const isModuleActive = (moduleId: string): boolean => {
-    return companySubscriptions.some(s => s.module?.moduleId === moduleId)
+    // Pruefe sowohl module.moduleId (Enum wie CORE) als auch moduleId (interne ID)
+    return companySubscriptions.some(s => 
+      s.module?.moduleId === moduleId || s.moduleId === moduleId
+    )
+  }
+  
+  const getSubscriptionForModule = (moduleId: string) => {
+    return companySubscriptions.find(s => 
+      s.module?.moduleId === moduleId || s.moduleId === moduleId
+    )
   }
   
   const handleToggleModule = async (moduleId: string, activate: boolean) => {
@@ -400,10 +412,12 @@ export default function SuperadminPage() {
     } else {
       // Deaktivieren - Subscription loeschen
       try {
-        const sub = companySubscriptions.find(s => s.module?.moduleId === moduleId)
+        const sub = getSubscriptionForModule(moduleId)
         if (sub) {
+          // Verwende die interne moduleId (UUID) fuer das Loeschen
+          const deleteModuleId = sub.moduleId
           await fetch(
-            `/api/superadmin/companies/${selectedCompanyForModules.id}/subscriptions?moduleId=${sub.moduleId}`,
+            `/api/superadmin/companies/${selectedCompanyForModules.id}/subscriptions?moduleId=${deleteModuleId}`,
             { method: 'DELETE' }
           )
           loadCompanySubscriptions(selectedCompanyForModules.id)
@@ -872,7 +886,6 @@ export default function SuperadminPage() {
                   <Select
                     value={selectedCompanyForModules?.id || ''}
                     onValueChange={(value) => {
-                      console.log('[v0] Company select changed to:', value)
                       const company = companies.find(c => c.id === value)
                       if (company) {
                         setSelectedCompanyForModules(company)
@@ -899,11 +912,16 @@ export default function SuperadminPage() {
   
                 {selectedCompanyForModules && (
                   <div className="space-y-4 border-t pt-4">
-                    <h4 className="font-medium">Module fuer: {selectedCompanyForModules.name}</h4>
-                    
-                    {/* Debug Info */}
-                    <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
-                      Module geladen: {modules.length} | Subscriptions: {companySubscriptions.length}
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium">Module fuer: {selectedCompanyForModules.name}</h4>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {companySubscriptions.length} aktive Subscriptions
+                        </Badge>
+                        <Badge variant="secondary" className="text-xs">
+                          {modules.length} Module verfuegbar
+                        </Badge>
+                      </div>
                     </div>
                     
                     {modules.length === 0 ? (
@@ -930,10 +948,7 @@ export default function SuperadminPage() {
                                   <Label className="text-xs text-muted-foreground">Abo-Plan</Label>
                                   <Select
                                     value={currentTier || 'FREE'}
-                                    onValueChange={(value) => {
-                                      console.log('[v0] Select changed to:', value)
-                                      handleModuleSubscription(module.moduleId, value)
-                                    }}
+                                    onValueChange={(value) => handleModuleSubscription(module.moduleId, value)}
                                   >
                                     <SelectTrigger className="min-w-[160px]">
                                       <SelectValue />
@@ -980,10 +995,7 @@ export default function SuperadminPage() {
                                     <Checkbox
                                       id={`inline-module-${module.moduleId}`}
                                       checked={isActive}
-                                      onCheckedChange={(checked) => {
-                                        console.log('[v0] Checkbox changed:', module.moduleId, checked)
-                                        handleToggleModule(module.moduleId, !!checked)
-                                      }}
+                                      onCheckedChange={(checked) => handleToggleModule(module.moduleId, !!checked)}
                                       className="h-5 w-5"
                                     />
                                     <label 
