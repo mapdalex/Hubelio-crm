@@ -453,6 +453,8 @@ enum ModuleId {
   SOCIALS
   CAMPAIGNS
   ANALYTICS
+  FINANCE
+  RENT
 }
 
 enum ModuleStatus {

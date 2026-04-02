@@ -107,6 +107,38 @@ const modules = [
     status: ModuleStatus.ACTIVE,
     sortOrder: 5,
   },
+  {
+    moduleId: ModuleId.FINANCE,
+    name: 'Hublio Finance',
+    description: 'Buchhaltung, Rechnungen, Ausgaben, Finanzberichte',
+    icon: 'landmark',
+    features: [
+      'accounting',
+      'invoices',
+      'expenses',
+      'finance_reports',
+      'tax',
+    ],
+    basePrice: 19.99,
+    status: ModuleStatus.ACTIVE,
+    sortOrder: 8,
+  },
+  {
+    moduleId: ModuleId.RENT,
+    name: 'Hublio Rent',
+    description: 'Mietverwaltung, Mietvertraege, Objekte, Mieterkommunikation',
+    icon: 'home',
+    features: [
+      'properties',
+      'rental_contracts',
+      'tenants',
+      'rent_tracking',
+      'maintenance',
+    ],
+    basePrice: 17.99,
+    status: ModuleStatus.ACTIVE,
+    sortOrder: 9,
+  },
 ]
 
 async function main() {

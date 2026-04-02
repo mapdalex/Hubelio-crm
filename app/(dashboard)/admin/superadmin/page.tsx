@@ -144,7 +144,7 @@ export default function SuperadminPage() {
     FREE: { label: 'Free', includedModules: 0, description: 'Nur Core-Modul' },
     STARTER: { label: 'Starter', includedModules: 1, description: 'Core + 1 Modul nach Wahl' },
     PRO: { label: 'Pro', includedModules: 2, description: 'Core + 2 Module nach Wahl' },
-    ENTERPRISE: { label: 'Enterprise', includedModules: 3, description: 'Core + 3 Module nach Wahl' },
+    ENTERPRISE: { label: 'Enterprise', includedModules: Infinity, description: 'Core + alle Module nach Wahl' },
   }
   
   // Verfuegbare Module (ausser CORE)
@@ -850,7 +850,7 @@ export default function SuperadminPage() {
                 Module in Datenbank erstellen
               </Button>
               <p className="text-xs text-muted-foreground mt-2">
-                Erstellt die 7 Standard-Module (CORE, MESSAGE, SALES, IT, SOCIALS, CAMPAIGNS, ANALYTICS)
+                Erstellt die 9 Standard-Module (CORE, MESSAGE, SALES, IT, SOCIALS, CAMPAIGNS, ANALYTICS, FINANCE, RENT)
               </p>
             </CardContent>
           </Card>
@@ -942,7 +942,7 @@ export default function SuperadminPage() {
                                       <SelectItem value="FREE">Free (0 Module)</SelectItem>
                                       <SelectItem value="STARTER">Starter (1 Modul)</SelectItem>
                                       <SelectItem value="PRO">Pro (2 Module)</SelectItem>
-                                      <SelectItem value="ENTERPRISE">Enterprise (3 Module)</SelectItem>
+                                      <SelectItem value="ENTERPRISE">Enterprise (alle Module)</SelectItem>
                                     </SelectContent>
                                   </Select>
                                   <Button 
@@ -1206,7 +1206,7 @@ export default function SuperadminPage() {
               {PLAN_CONFIG[formData.plan].includedModules > 0 && (
                 <div className="space-y-2 mt-3">
                   <Label>
-                    Module auswaehlen ({formData.includedModules.length}/{PLAN_CONFIG[formData.plan].includedModules})
+                    Module auswaehlen ({formData.includedModules.length}{PLAN_CONFIG[formData.plan].includedModules === Infinity ? '' : `/${PLAN_CONFIG[formData.plan].includedModules}`})
                   </Label>
                   <div className="grid grid-cols-2 gap-2">
                     {availableModules.map((mod) => {
