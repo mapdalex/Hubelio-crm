@@ -14,11 +14,20 @@ export async function GET(
 
     const { id } = await params
 
-    const service = await db.service.findUnique({
-      where: { id },
+    // Multi-tenant: Service über Customer->companyId filtern
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const whereClause: any = { id }
+    if (session.role !== 'SUPERADMIN' && session.companyId) {
+      whereClause.customer = { companyId: session.companyId }
+    } else if (session.role === 'SUPERADMIN' && session.companyId) {
+      whereClause.customer = { companyId: session.companyId }
+    }
+
+    const service = await db.service.findFirst({
+      where: whereClause,
       include: {
         customer: {
-          select: { id: true, customerNumber: true, company: true, firstName: true, lastName: true },
+          select: { id: true, customerNumber: true, companyName: true, firstName: true, lastName: true, companyId: true },
         },
       },
     })
@@ -46,6 +55,16 @@ export async function PATCH(
 
     const { id } = await params
     const data = await request.json()
+
+    // Multi-tenant: Pruefen ob Service zur eigenen Firma gehoert (über Customer)
+    if (session.role !== 'SUPERADMIN' && session.companyId) {
+      const existingService = await db.service.findFirst({
+        where: { id, customer: { companyId: session.companyId } }
+      })
+      if (!existingService) {
+        return NextResponse.json({ error: 'Service nicht gefunden' }, { status: 404 })
+      }
+    }
 
     const service = await db.service.update({
       where: { id },
@@ -92,6 +111,16 @@ export async function DELETE(
     }
 
     const { id } = await params
+
+    // Multi-tenant: Pruefen ob Service zur eigenen Firma gehoert (über Customer)
+    if (session.role !== 'SUPERADMIN' && session.companyId) {
+      const existingService = await db.service.findFirst({
+        where: { id, customer: { companyId: session.companyId } }
+      })
+      if (!existingService) {
+        return NextResponse.json({ error: 'Service nicht gefunden' }, { status: 404 })
+      }
+    }
 
     const service = await db.service.delete({ where: { id } })
 

@@ -14,11 +14,20 @@ export async function GET(
     
     const { id } = await params
     
-    const computer = await db.computer.findUnique({
-      where: { id },
+    // Multi-tenant: Computer über Customer->companyId filtern
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const whereClause: any = { id }
+    if (session.role !== 'SUPERADMIN' && session.companyId) {
+      whereClause.customer = { companyId: session.companyId }
+    } else if (session.role === 'SUPERADMIN' && session.companyId) {
+      whereClause.customer = { companyId: session.companyId }
+    }
+    
+    const computer = await db.computer.findFirst({
+      where: whereClause,
       include: {
         customer: {
-          select: { id: true, customerNumber: true, company: true, firstName: true, lastName: true }
+          select: { id: true, customerNumber: true, companyName: true, firstName: true, lastName: true, companyId: true }
         },
         tickets: {
           orderBy: { createdAt: 'desc' },
@@ -51,7 +60,14 @@ export async function PATCH(
     const { id } = await params
     const data = await request.json()
     
-    const existingComputer = await db.computer.findUnique({ where: { id } })
+    // Multi-tenant: Pruefen ob Computer zur eigenen Firma gehoert (über Customer)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const whereClause: any = { id }
+    if (session.role !== 'SUPERADMIN' && session.companyId) {
+      whereClause.customer = { companyId: session.companyId }
+    }
+    
+    const existingComputer = await db.computer.findFirst({ where: whereClause })
     if (!existingComputer) {
       return NextResponse.json({ error: 'Geraet nicht gefunden' }, { status: 404 })
     }
@@ -96,7 +112,14 @@ export async function DELETE(
     
     const { id } = await params
     
-    const computer = await db.computer.findUnique({ where: { id } })
+    // Multi-tenant: Pruefen ob Computer zur eigenen Firma gehoert (über Customer)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const whereClause: any = { id }
+    if (session.role !== 'SUPERADMIN' && session.companyId) {
+      whereClause.customer = { companyId: session.companyId }
+    }
+    
+    const computer = await db.computer.findFirst({ where: whereClause })
     if (!computer) {
       return NextResponse.json({ error: 'Geraet nicht gefunden' }, { status: 404 })
     }

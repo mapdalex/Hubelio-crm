@@ -14,11 +14,20 @@ export async function GET(
 
     const { id } = await params
 
-    const domain = await db.domain.findUnique({
-      where: { id },
+    // Multi-tenant: Domain über Customer->companyId filtern
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const whereClause: any = { id }
+    if (session.role !== 'SUPERADMIN' && session.companyId) {
+      whereClause.customer = { companyId: session.companyId }
+    } else if (session.role === 'SUPERADMIN' && session.companyId) {
+      whereClause.customer = { companyId: session.companyId }
+    }
+
+    const domain = await db.domain.findFirst({
+      where: whereClause,
       include: {
         customer: {
-          select: { id: true, customerNumber: true, company: true, firstName: true, lastName: true },
+          select: { id: true, customerNumber: true, companyName: true, firstName: true, lastName: true, companyId: true },
         },
       },
     })
@@ -46,6 +55,16 @@ export async function PATCH(
 
     const { id } = await params
     const data = await request.json()
+
+    // Multi-tenant: Pruefen ob Domain zur eigenen Firma gehoert (über Customer)
+    if (session.role !== 'SUPERADMIN' && session.companyId) {
+      const existingDomain = await db.domain.findFirst({
+        where: { id, customer: { companyId: session.companyId } }
+      })
+      if (!existingDomain) {
+        return NextResponse.json({ error: 'Domain nicht gefunden' }, { status: 404 })
+      }
+    }
 
     const domain = await db.domain.update({
       where: { id },
@@ -92,6 +111,16 @@ export async function DELETE(
     }
 
     const { id } = await params
+
+    // Multi-tenant: Pruefen ob Domain zur eigenen Firma gehoert (über Customer)
+    if (session.role !== 'SUPERADMIN' && session.companyId) {
+      const existingDomain = await db.domain.findFirst({
+        where: { id, customer: { companyId: session.companyId } }
+      })
+      if (!existingDomain) {
+        return NextResponse.json({ error: 'Domain nicht gefunden' }, { status: 404 })
+      }
+    }
 
     const domain = await db.domain.delete({ where: { id } })
 

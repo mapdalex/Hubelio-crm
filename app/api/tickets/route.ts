@@ -16,12 +16,22 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || 'all'
     const priority = searchParams.get('priority') || 'all'
     
-    const isEmployee = ['ADMIN', 'MITARBEITER', 'BUCHHALTUNG'].includes(session.role)
+    const isEmployee = ['ADMIN', 'MITARBEITER', 'BUCHHALTUNG', 'SUPERADMIN'].includes(session.role)
     
     const where: any = {}
     
-    // Kunden sehen nur ihre eigenen Tickets
-    if (!isEmployee) {
+    // Multi-tenant filter: Nur Tickets der eigenen Firma anzeigen
+    // SUPERADMIN kann alle sehen (wenn keine Firma ausgewählt), andere nur ihre Firma
+    if (isEmployee) {
+      if (session.role !== 'SUPERADMIN' && session.companyId) {
+        where.companyId = session.companyId
+      } else if (session.role === 'SUPERADMIN' && session.companyId) {
+        // SUPERADMIN mit ausgewählter Firma - zeige nur Tickets dieser Firma
+        where.companyId = session.companyId
+      }
+      // SUPERADMIN ohne Firma sieht alle Tickets (kein Filter)
+    } else {
+      // Kunden sehen nur ihre eigenen Tickets
       const customer = await db.customer.findFirst({
         where: { userId: session.userId },
       })
@@ -36,7 +46,7 @@ export async function GET(request: NextRequest) {
       where.OR = [
         { ticketNumber: { contains: search, mode: 'insensitive' } },
         { subject: { contains: search, mode: 'insensitive' } },
-        { customer: { company: { contains: search, mode: 'insensitive' } } },
+        { customer: { companyName: { contains: search, mode: 'insensitive' } } },
         { customer: { lastName: { contains: search, mode: 'insensitive' } } },
       ]
     }
@@ -144,6 +154,7 @@ export async function POST(request: NextRequest) {
         description: data.description,
         status: 'OPEN',
         priority: data.priority || 'MEDIUM',
+        companyId: session.companyId || null, // Multi-tenant: Ticket gehört zur Firma des Erstellers
         customerId: customerId || null,
         computerId: data.computerId || null,
         createdById: session.userId,
