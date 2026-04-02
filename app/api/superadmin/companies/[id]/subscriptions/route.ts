@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { isSuperAdmin } from '@/lib/auth'
+import { getSession, isSuperAdmin } from '@/lib/auth'
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const isSuperAdminUser = await isSuperAdmin()
-    if (!isSuperAdminUser) {
+    const session = await getSession()
+    if (!session || !isSuperAdmin(session.role)) {
       return NextResponse.json(
         { error: 'Nur Superadmin darf Subscriptions abrufen' },
         { status: 403 }
@@ -41,8 +41,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const isSuperAdminUser = await isSuperAdmin()
-    if (!isSuperAdminUser) {
+    const session = await getSession()
+    if (!session || !isSuperAdmin(session.role)) {
       return NextResponse.json(
         { error: 'Nur Superadmin darf Subscriptions verwalten' },
         { status: 403 }
@@ -122,8 +122,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const isSuperAdminUser = await isSuperAdmin()
-    if (!isSuperAdminUser) {
+    const session = await getSession()
+    if (!session || !isSuperAdmin(session.role)) {
       return NextResponse.json(
         { error: 'Nur Superadmin darf Subscriptions löschen' },
         { status: 403 }
