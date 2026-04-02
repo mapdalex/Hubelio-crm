@@ -208,8 +208,8 @@ export async function hasModulePermission(
 
   if (!companyUser) return false
 
-  // Company owners and admins have full access
-  if (companyUser.role === CompanyRole.OWNER || companyUser.role === CompanyRole.ADMIN) {
+  // Company owners, admins and managers have full access to all subscribed modules
+  if (companyUser.role === CompanyRole.OWNER || companyUser.role === CompanyRole.ADMIN || companyUser.role === CompanyRole.MANAGER) {
     return true
   }
 
@@ -254,8 +254,8 @@ export async function getUserAccessibleModules(
 
   if (!companyUser) return [ModuleId.CORE]
 
-  // Company owners and admins have access to all subscribed modules
-  if (companyUser.role === CompanyRole.OWNER || companyUser.role === CompanyRole.ADMIN) {
+  // Company owners, admins and managers have access to all subscribed modules
+  if (companyUser.role === CompanyRole.OWNER || companyUser.role === CompanyRole.ADMIN || companyUser.role === CompanyRole.MANAGER) {
     const subscribedModules = companyUser.company.subscriptions.map(
       (sub) => sub.module.moduleId
     )
