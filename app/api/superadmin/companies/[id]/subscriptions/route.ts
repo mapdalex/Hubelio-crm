@@ -132,21 +132,40 @@ export async function DELETE(
 
     const { id } = await params
     const { searchParams } = new URL(req.url)
-    const moduleId = searchParams.get('moduleId')
+    const moduleIdParam = searchParams.get('moduleId')
 
-    if (!moduleId) {
+    if (!moduleIdParam) {
       return NextResponse.json(
         { error: 'moduleId ist erforderlich' },
         { status: 400 }
       )
     }
 
-    // Subscription löschen
+    // Module finden - moduleIdParam kann entweder UUID oder Enum-Wert sein
+    let module = await db.module.findUnique({
+      where: { id: moduleIdParam },
+    })
+
+    // Falls nicht gefunden, versuche mit moduleId (Enum-Wert wie CORE, MESSAGE etc.)
+    if (!module) {
+      module = await db.module.findUnique({
+        where: { moduleId: moduleIdParam as any },
+      })
+    }
+
+    if (!module) {
+      return NextResponse.json(
+        { error: 'Modul nicht gefunden: ' + moduleIdParam },
+        { status: 404 }
+      )
+    }
+
+    // Subscription löschen mit der internen module.id
     await db.subscription.delete({
       where: {
         companyId_moduleId: {
           companyId: id,
-          moduleId,
+          moduleId: module.id,
         },
       },
     })

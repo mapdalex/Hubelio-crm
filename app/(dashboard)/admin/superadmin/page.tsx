@@ -348,10 +348,13 @@ export default function SuperadminPage() {
       const res = await fetch(`/api/superadmin/companies/${companyId}/subscriptions`)
       if (res.ok) {
         const data = await res.json()
+        console.log('[v0] Loaded subscriptions for company:', companyId, data)
         setCompanySubscriptions(data)
+      } else {
+        console.log('[v0] Failed to load subscriptions:', res.status, await res.text())
       }
     } catch (err) {
-      console.error('Error loading subscriptions:', err)
+      console.error('[v0] Error loading subscriptions:', err)
     }
   }
 
@@ -382,6 +385,7 @@ export default function SuperadminPage() {
     const sub = companySubscriptions.find(s => 
       s.module?.moduleId === moduleId || s.moduleId === moduleId
     )
+    console.log('[v0] getSubscriptionTier for', moduleId, '- found:', sub, '- tier:', sub?.tier)
     return sub?.tier || ''
   }
   
@@ -405,25 +409,31 @@ export default function SuperadminPage() {
   const handleToggleModule = async (moduleId: string, activate: boolean) => {
     if (!selectedCompanyForModules) return
     
+    console.log('[v0] handleToggleModule:', moduleId, 'activate:', activate)
+    
     if (activate) {
       // Aktivieren mit dem aktuellen CORE-Plan
       const coreTier = getCoreTier()
+      console.log('[v0] Activating with tier:', coreTier)
       await handleModuleSubscription(moduleId, coreTier)
     } else {
       // Deaktivieren - Subscription loeschen
       try {
         const sub = getSubscriptionForModule(moduleId)
+        console.log('[v0] Found subscription to delete:', sub)
         if (sub) {
           // Verwende die interne moduleId (UUID) fuer das Loeschen
           const deleteModuleId = sub.moduleId
-          await fetch(
+          console.log('[v0] Deleting subscription with moduleId:', deleteModuleId)
+          const res = await fetch(
             `/api/superadmin/companies/${selectedCompanyForModules.id}/subscriptions?moduleId=${deleteModuleId}`,
             { method: 'DELETE' }
           )
+          console.log('[v0] Delete result:', res.status)
           loadCompanySubscriptions(selectedCompanyForModules.id)
         }
       } catch (err) {
-        console.error('Error deactivating module:', err)
+        console.error('[v0] Error deactivating module:', err)
       }
     }
   }
