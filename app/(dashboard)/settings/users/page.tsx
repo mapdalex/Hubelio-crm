@@ -149,11 +149,12 @@ export default function UsersSettingsPage() {
     try {
       const res = await fetch(`/api/companies/${currentCompany.id}/subscriptions`)
       if (res.ok) {
+        // Die API gibt das Array direkt zurueck (kein Wrapper-Objekt)
         const data = await res.json()
-        // Filtere nur aktive Subscriptions und extrahiere Module
-        const activeModules = data.subscriptions
-          ?.filter((sub: { status: string }) => sub.status === 'ACTIVE' || sub.status === 'TRIAL')
-          .map((sub: { module: CompanyModule }) => sub.module) || []
+        const subscriptionsArray = Array.isArray(data) ? data : (data.subscriptions ?? [])
+        const activeModules = subscriptionsArray
+          .filter((sub: { status: string }) => sub.status === 'ACTIVE' || sub.status === 'TRIAL')
+          .map((sub: { module: CompanyModule }) => sub.module)
         setCompanyModules(activeModules)
       }
     } catch (error) {
@@ -640,9 +641,9 @@ export default function UsersSettingsPage() {
               
               {!needsModulePermissions(newRole) && (
                 <div className="p-4 bg-primary/10 rounded-lg text-sm">
-                  <p className="font-medium">Hinweis: Admins haben automatisch Zugriff auf alle Module</p>
+                  <p className="font-medium">Hinweis: Diese Rolle hat automatisch alle Module</p>
                   <p className="text-muted-foreground">
-                    Benutzer mit der Rolle Admin haben automatisch Zugriff auf alle Module, 
+                    Owner, Admins und Manager haben automatisch Zugriff auf alle Module,
                     die fuer diese Firma freigeschaltet sind.
                   </p>
                 </div>
@@ -790,9 +791,9 @@ export default function UsersSettingsPage() {
               
               {!needsModulePermissions(newUserData.role) && (
                 <div className="p-4 bg-primary/10 rounded-lg text-sm">
-                  <p className="font-medium">Hinweis: Admins haben automatisch Zugriff auf alle Module</p>
+                  <p className="font-medium">Hinweis: Diese Rolle hat automatisch alle Module</p>
                   <p className="text-muted-foreground">
-                    Benutzer mit der Rolle Admin haben automatisch Zugriff auf alle Module, 
+                    Owner, Admins und Manager haben automatisch Zugriff auf alle Module,
                     die fuer diese Firma freigeschaltet sind.
                   </p>
                 </div>
