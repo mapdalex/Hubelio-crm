@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getSession } from '@/lib/auth'
+import { getSession, canViewInCompany } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
       url: string
     }> = []
     
-    // Nur Mitarbeiter dürfen alles durchsuchen
-    const isEmployee = ['ADMIN', 'MITARBEITER', 'BUCHHALTUNG'].includes(session.role)
+    // Nur Mitarbeiter dürfen alles durchsuchen (basierend auf Firmenrolle)
+    const isEmployee = canViewInCompany(session)
     
     if (isEmployee) {
       // Kunden suchen

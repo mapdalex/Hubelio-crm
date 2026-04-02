@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getSession } from '@/lib/auth'
+import { getSession, canViewInCompany } from '@/lib/auth'
 import { addDays, startOfMonth, endOfMonth } from 'date-fns'
 import type { ModuleId } from '@prisma/client'
 
@@ -15,7 +15,7 @@ export async function GET() {
 
     const companyId = session.companyId
     const accessibleModules = session.accessibleModules || ['CORE']
-    const isEmployee = ['ADMIN', 'MITARBEITER', 'BUCHHALTUNG', 'SUPERADMIN'].includes(session.role)
+    const isEmployee = canViewInCompany(session)
 
     if (!isEmployee) {
       return NextResponse.json({ 

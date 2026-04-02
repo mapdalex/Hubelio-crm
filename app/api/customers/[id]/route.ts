@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getSession, isEmployee } from '@/lib/auth'
+import { getSession, canViewInCompany, canEditInCompany } from '@/lib/auth'
 
 export async function GET(
   request: NextRequest,
@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     const session = await getSession()
-    if (!session || !isEmployee(session.role)) {
+    if (!canViewInCompany(session)) {
       return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
     
@@ -54,7 +54,7 @@ export async function PATCH(
 ) {
   try {
     const session = await getSession()
-    if (!session || !isEmployee(session.role)) {
+    if (!canEditInCompany(session)) {
       return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
     

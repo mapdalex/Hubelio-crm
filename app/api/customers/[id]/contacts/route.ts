@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getSession, isEmployee } from '@/lib/auth'
+import { getSession, canEditInCompany } from '@/lib/auth'
 
 export async function POST(
   request: NextRequest,
@@ -8,7 +8,7 @@ export async function POST(
 ) {
   try {
     const session = await getSession()
-    if (!session || !isEmployee(session.role)) {
+    if (!canEditInCompany(session)) {
       return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
     
