@@ -353,9 +353,11 @@ export default function UsersSettingsPage() {
     return false
   }
 
-  // Pruefe ob der Benutzer Modul-Berechtigungen benoetigt (nicht fuer OWNER/ADMIN)
+  // Pruefe ob der Benutzer individuelle Modul-Berechtigungen benoetigt
+  // OWNER, ADMIN und MANAGER haben automatisch alle Module
+  // Nur MEMBER und VIEWER bekommen individuelle Zuweisungen
   const needsModulePermissions = (role: string) => {
-    return ['MANAGER', 'MEMBER', 'VIEWER'].includes(role)
+    return ['MEMBER', 'VIEWER'].includes(role)
   }
 
   if (!canManageUsers) {
@@ -441,7 +443,7 @@ export default function UsersSettingsPage() {
                       {getRoleBadge(companyUser.role)}
                     </TableCell>
                     <TableCell>
-                      {['OWNER', 'ADMIN'].includes(companyUser.role) ? (
+                      {['OWNER', 'ADMIN', 'MANAGER'].includes(companyUser.role) ? (
                         <span className="text-sm text-muted-foreground">Alle Module</span>
                       ) : (
                         getModuleAccessBadges(companyUser.modulePermissions)
