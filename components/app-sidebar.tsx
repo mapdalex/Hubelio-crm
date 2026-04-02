@@ -90,6 +90,7 @@ const getModuleNavItems = (accessibleModules: ModuleId[]): NavItem[] => {
       icon: ShoppingCart,
       module: 'SALES',
       items: [
+        { title: 'Dashboard', url: '/sales', icon: ShoppingCart, module: 'SALES' },
         { title: 'Services', url: '/sales/services', icon: ShoppingCart, module: 'SALES' },
       ],
     },
@@ -99,10 +100,9 @@ const getModuleNavItems = (accessibleModules: ModuleId[]): NavItem[] => {
       icon: Monitor,
       module: 'IT',
       items: [
-        { title: 'Uebersicht', url: '/it', icon: Monitor, module: 'IT' },
+        { title: 'Dashboard', url: '/it', icon: Monitor, module: 'IT' },
         { title: 'PCs & Geraete', url: '/it/computers', icon: Monitor, module: 'IT' },
         { title: 'Domains', url: '/it/domains', icon: Globe, module: 'IT' },
-        { title: 'Tickets', url: '/tickets', icon: Ticket, module: 'IT' },
       ],
     },
     {
@@ -111,9 +111,9 @@ const getModuleNavItems = (accessibleModules: ModuleId[]): NavItem[] => {
       icon: MessageSquare,
       module: 'MESSAGE',
       items: [
-        { title: 'Alle', url: '/messages', icon: MessageSquare, module: 'MESSAGE' },
+        { title: 'Dashboard', url: '/messages', icon: MessageSquare, module: 'MESSAGE' },
+        { title: 'Tickets', url: '/tickets', icon: Ticket, module: 'MESSAGE' },
         { title: 'Posteingang', url: '/messages/inbox', icon: Mail, module: 'MESSAGE' },
-        { title: 'Entwuerfe', url: '/messages/drafts', icon: Mail, module: 'MESSAGE' },
       ],
     },
     {
@@ -122,9 +122,9 @@ const getModuleNavItems = (accessibleModules: ModuleId[]): NavItem[] => {
       icon: Share2,
       module: 'SOCIALS',
       items: [
+        { title: 'Dashboard', url: '/socials', icon: Share2, module: 'SOCIALS' },
         { title: 'Accounts', url: '/socials/accounts', icon: Share2, module: 'SOCIALS' },
         { title: 'Posts', url: '/socials/posts', icon: Share2, module: 'SOCIALS' },
-        { title: 'Analytics', url: '/socials/analytics', icon: BarChart3, module: 'SOCIALS' },
       ],
     },
     {
@@ -133,7 +133,7 @@ const getModuleNavItems = (accessibleModules: ModuleId[]): NavItem[] => {
       icon: TrendingUp,
       module: 'CAMPAIGNS',
       items: [
-        { title: 'Alle', url: '/campaigns', icon: TrendingUp, module: 'CAMPAIGNS' },
+        { title: 'Dashboard', url: '/campaigns', icon: TrendingUp, module: 'CAMPAIGNS' },
         { title: 'Erstellen', url: '/campaigns/create', icon: TrendingUp, module: 'CAMPAIGNS' },
         { title: 'Berichte', url: '/campaigns/reports', icon: BarChart3, module: 'CAMPAIGNS' },
       ],
