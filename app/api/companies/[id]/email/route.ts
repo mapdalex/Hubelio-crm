@@ -13,7 +13,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const companyId = params.id
+    const { id: companyId } = await params
 
     // Verify user is admin of this company
     const companyUser = await db.companyUser.findFirst({
@@ -62,7 +62,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const companyId = params.id
+    const { id: companyId } = await params
     const data = await request.json()
 
     // Verify user is admin of this company
