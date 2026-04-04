@@ -624,12 +624,12 @@ export default function EmailSettingsPage() {
             </div>
           )}
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t mt-4">
             <Button 
+              type="button"
               variant="outline" 
               onClick={handleTestConnection}
               disabled={isTesting || !formData.host || !formData.username}
-              className="w-full sm:w-auto"
             >
               {isTesting ? (
                 <>
@@ -643,15 +643,13 @@ export default function EmailSettingsPage() {
                 </>
               )}
             </Button>
-            <div className="flex gap-2 w-full sm:w-auto">
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="flex-1 sm:flex-initial">
-                Abbrechen
-              </Button>
-              <Button onClick={handleAddEmailAccount} className="flex-1 sm:flex-initial">
-                {editingId ? 'Speichern' : 'Konto hinzufuegen'}
-              </Button>
-            </div>
-          </DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button type="button" onClick={handleAddEmailAccount}>
+              {editingId ? 'Speichern' : 'Konto hinzufuegen'}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </main>
