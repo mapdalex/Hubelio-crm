@@ -60,7 +60,7 @@ const platforms: { id: SocialPlatform; name: string; description: string }[] = [
   },
 ]
 
-function SocialSettingsContent() {
+export function SocialSettingsContent() {
   const { companyId, companyRole } = useAuth()
   const searchParams = useSearchParams()
   const [accounts, setAccounts] = useState<SocialAccount[]>([])
@@ -385,10 +385,4 @@ function SocialSettingsContent() {
   )
 }
 
-export default function SocialSettingsPage() {
-  return (
-    <Suspense fallback={<div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
-      <SocialSettingsContent />
-    </Suspense>
-  )
-}
+
