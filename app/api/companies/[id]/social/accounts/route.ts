@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 
 // GET /api/companies/[id]/social/accounts - Liste aller Social Accounts
@@ -16,7 +16,7 @@ export async function GET(
     const { id } = await params
 
     // Check company access
-    const companyUser = await prisma.companyUser.findUnique({
+    const companyUser = await db.companyUser.findUnique({
       where: {
         userId_id: {
           userId: user.id,
@@ -29,7 +29,7 @@ export async function GET(
       return NextResponse.json({ error: 'Kein Zugriff auf diese Firma' }, { status: 403 })
     }
 
-    const accounts = await prisma.socialAccount.findMany({
+    const accounts = await db.socialAccount.findMany({
       where: { id },
       orderBy: { createdAt: 'desc' },
     })
@@ -62,7 +62,7 @@ export async function POST(
     const { id } = await params
 
     // Check company access and role (only ADMIN, MANAGER, OWNER can add accounts)
-    const companyUser = await prisma.companyUser.findUnique({
+    const companyUser = await db.companyUser.findUnique({
       where: {
         userId_id: {
           userId: user.id,
@@ -87,7 +87,7 @@ export async function POST(
     }
 
     // Check if account already exists
-    const existingAccount = await prisma.socialAccount.findUnique({
+    const existingAccount = await db.socialAccount.findUnique({
       where: {
         id_platform_accountId: {
           id,
@@ -99,7 +99,7 @@ export async function POST(
 
     if (existingAccount) {
       // Update existing account with new tokens
-      const updatedAccount = await prisma.socialAccount.update({
+      const updatedAccount = await db.socialAccount.update({
         where: { id: existingAccount.id },
         data: {
           accessToken,
@@ -118,7 +118,7 @@ export async function POST(
     }
 
     // Create new account
-    const account = await prisma.socialAccount.create({
+    const account = await db.socialAccount.create({
       data: {
         id,
         platform,
