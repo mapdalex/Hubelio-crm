@@ -15,12 +15,12 @@ export async function POST(
     const { id: companyId } = await params
     const data = await request.json()
 
-    // Verify user is admin of this company
+    // Verify user is admin or owner of this company
     const companyUser = await db.companyUser.findFirst({
       where: {
         userId: session.userId,
         companyId,
-        role: 'ADMIN',
+        role: { in: ['OWNER', 'ADMIN'] },
       },
     })
 
