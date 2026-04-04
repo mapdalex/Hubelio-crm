@@ -33,11 +33,15 @@ export async function GET(
       select: {
         id: true,
         name: true,
+        displayName: true,
         protocol: true,
         host: true,
         port: true,
         username: true,
         isActive: true,
+        accountType: true,
+        createTicketOnReceive: true,
+        lastSync: true,
       },
     })
 
@@ -78,6 +82,7 @@ export async function POST(
       data: {
         companyId,
         name: data.name,
+        displayName: data.displayName || null,
         protocol: data.protocol,
         host: data.host,
         port: data.port,
@@ -89,6 +94,9 @@ export async function POST(
         smtpUsername: data.smtpUsername,
         smtpPassword: data.smtpPassword,
         smtpUseSsl: data.smtpUseSsl,
+        accountType: data.accountType || 'STANDARD',
+        createTicketOnReceive: data.createTicketOnReceive || false,
+        autoAssignToUserId: data.autoAssignToUserId || null,
       },
     })
 

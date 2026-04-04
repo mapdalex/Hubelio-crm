@@ -87,6 +87,7 @@ export const ROUTE_MODULE_MAP: Record<string, ModuleId> = {
   '/quotes': ModuleId.SALES,
   '/contracts': ModuleId.SALES,
   '/it': ModuleId.IT,
+  '/it/tickets': ModuleId.IT,
   '/it/computers': ModuleId.IT,
   '/it/domains': ModuleId.IT,
   '/socials': ModuleId.SOCIALS,

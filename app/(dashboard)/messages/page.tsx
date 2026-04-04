@@ -192,24 +192,30 @@ async function MessagesDashboardStats() {
           </Link>
         </Card>
         
-        <Card className="hover:bg-muted/50 transition-colors cursor-pointer opacity-50">
-          <CardContent className="flex items-center gap-3 pt-6">
-            <Inbox className="h-8 w-8 text-muted-foreground" />
-            <div>
-              <p className="font-medium">Posteingang</p>
-              <p className="text-xs text-muted-foreground">Demnachst</p>
-            </div>
-          </CardContent>
+        <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+          <Link href="/messages/inbox">
+            <CardContent className="flex items-center gap-3 pt-6">
+              <Inbox className="h-8 w-8 text-primary" />
+              <div>
+                <p className="font-medium">Posteingang</p>
+                <p className="text-xs text-muted-foreground">E-Mails verwalten</p>
+              </div>
+              <ArrowRight className="h-4 w-4 ml-auto" />
+            </CardContent>
+          </Link>
         </Card>
         
-        <Card className="hover:bg-muted/50 transition-colors cursor-pointer opacity-50">
-          <CardContent className="flex items-center gap-3 pt-6">
-            <Send className="h-8 w-8 text-muted-foreground" />
-            <div>
-              <p className="font-medium">Gesendet</p>
-              <p className="text-xs text-muted-foreground">Demnachst</p>
-            </div>
-          </CardContent>
+        <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+          <Link href="/messages/inbox?folder=SENT">
+            <CardContent className="flex items-center gap-3 pt-6">
+              <Send className="h-8 w-8 text-primary" />
+              <div>
+                <p className="font-medium">Gesendet</p>
+                <p className="text-xs text-muted-foreground">Gesendete E-Mails</p>
+              </div>
+              <ArrowRight className="h-4 w-4 ml-auto" />
+            </CardContent>
+          </Link>
         </Card>
       </div>
       

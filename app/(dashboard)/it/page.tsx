@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Monitor, Globe, AlertCircle, Clock, Server, Laptop, Shield } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Monitor, Globe, AlertCircle, Clock, Server, Laptop, Shield, Ticket, ArrowRight } from 'lucide-react'
 import { format, addDays } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -36,6 +37,10 @@ async function ITDashboardStats() {
     domainsExpiringSoon,
     warrantyExpiringSoon,
     recentComputers,
+    openTickets,
+    urgentTickets,
+    inProgressTickets,
+    recentTickets,
   ] = await Promise.all([
     db.computer.count(),
     db.computer.count({ where: { isActive: true } }),
@@ -70,6 +75,22 @@ async function ITDashboardStats() {
       orderBy: { createdAt: 'desc' },
       take: 5,
     }),
+    // Ticket Stats
+    db.ticket.count({ where: { status: 'OPEN' } }),
+    db.ticket.count({ where: { priority: 'URGENT', status: { in: ['OPEN', 'IN_PROGRESS'] } } }),
+    db.ticket.count({ where: { status: 'IN_PROGRESS' } }),
+    db.ticket.findMany({
+      where: { status: { in: ['OPEN', 'IN_PROGRESS', 'WAITING'] } },
+      include: { 
+        customer: true,
+        assignedTo: { select: { name: true } },
+      },
+      orderBy: [
+        { priority: 'desc' },
+        { createdAt: 'desc' },
+      ],
+      take: 5,
+    }),
   ])
   
   // Count by type
@@ -84,8 +105,116 @@ async function ITDashboardStats() {
     return acc
   }, {} as Record<string, number>)
   
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'URGENT': return 'destructive'
+      case 'HIGH': return 'default'
+      case 'MEDIUM': return 'secondary'
+      default: return 'outline'
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'OPEN': return 'default'
+      case 'IN_PROGRESS': return 'secondary'
+      case 'WAITING': return 'outline'
+      default: return 'outline'
+    }
+  }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'OPEN': return 'Offen'
+      case 'IN_PROGRESS': return 'In Bearbeitung'
+      case 'WAITING': return 'Wartend'
+      default: return status
+    }
+  }
+  
   return (
     <div className="space-y-6">
+      {/* IT Support Tickets Widget */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Ticket className="h-5 w-5" />
+              IT Support Tickets
+            </CardTitle>
+            <CardDescription>Aktuelle Tickets und Support-Anfragen</CardDescription>
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/it/tickets">
+              Alle anzeigen
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3 mb-6">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <Ticket className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{openTickets}</p>
+                <p className="text-xs text-muted-foreground">Offene Tickets</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+                <AlertCircle className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{urgentTickets}</p>
+                <p className="text-xs text-muted-foreground">Dringend</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/10">
+                <Clock className="h-5 w-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{inProgressTickets}</p>
+                <p className="text-xs text-muted-foreground">In Bearbeitung</p>
+              </div>
+            </div>
+          </div>
+          
+          {recentTickets.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Keine offenen Tickets</p>
+          ) : (
+            <div className="space-y-3">
+              {recentTickets.map((ticket) => (
+                <div key={ticket.id} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
+                  <div className="flex-1 min-w-0">
+                    <Link 
+                      href={`/tickets/${ticket.id}`}
+                      className="font-medium hover:underline truncate block"
+                    >
+                      {ticket.ticketNumber}: {ticket.subject}
+                    </Link>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {ticket.customer?.companyName || (ticket.customer ? `${ticket.customer.firstName} ${ticket.customer.lastName}` : 'Kein Kunde')}
+                      {ticket.assignedTo && ` - ${ticket.assignedTo.name}`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    <Badge variant={getPriorityColor(ticket.priority) as 'default' | 'secondary' | 'destructive' | 'outline'}>
+                      {ticket.priority}
+                    </Badge>
+                    <Badge variant={getStatusColor(ticket.status) as 'default' | 'secondary' | 'outline'}>
+                      {getStatusLabel(ticket.status)}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>

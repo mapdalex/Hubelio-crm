@@ -105,6 +105,7 @@ const getModuleNavItems = (accessibleModules: ModuleId[]): NavItem[] => {
       module: 'IT',
       items: [
         { title: 'Dashboard', url: '/it', icon: Monitor, module: 'IT' },
+        { title: 'Support Tickets', url: '/it/tickets', icon: Ticket, module: 'IT' },
         { title: 'PCs & Geraete', url: '/it/computers', icon: Monitor, module: 'IT' },
         { title: 'Domains', url: '/it/domains', icon: Globe, module: 'IT' },
       ],

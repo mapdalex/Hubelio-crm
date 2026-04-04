@@ -56,6 +56,9 @@ model User {
   // Antraege-Beziehungen
   requests           Request[]           @relation("UserRequests")
   approvedRequests   Request[]           @relation("UserApprovedRequests")
+  
+  // E-Mail Auto-Zuweisung
+  emailAutoAssignments EmailSettings[]   @relation("EmailAutoAssign")
 
   @@index([email])
   @@index([role])
@@ -273,6 +276,7 @@ model Ticket {
   assignedTo    User?          @relation("TicketAssignee", fields: [assignedToId], references: [id])
   comments      TicketComment[]
   attachments   File[]
+  emails        EmailMessage[] @relation("TicketEmails")
 
   @@index([companyId])
   @@index([ticketNumber])
@@ -301,10 +305,16 @@ model TicketComment {
 // E-MAIL EINSTELLUNGEN
 // ============================================
 
+enum EmailAccountType {
+  STANDARD      // Normales Postfach
+  TICKET_SYSTEM // Ticket-System Integration
+}
+
 model EmailSettings {
   id            String   @id @default(cuid())
   companyId     String?  // Multi-tenant
   name          String
+  displayName   String?  // Anzeigename in der Sidebar
   protocol      String   // IMAP, POP3
   host          String
   port          Int
@@ -318,12 +328,94 @@ model EmailSettings {
   smtpUseSsl    Boolean  @default(true)
   isActive      Boolean  @default(true)
   lastSync      DateTime?
+  
+  // NEU: Postfach-Typ und Ticket-Integration
+  accountType          EmailAccountType @default(STANDARD)
+  createTicketOnReceive Boolean         @default(false)
+  autoAssignToUserId   String?         // Auto-Zuweisung bei Ticket-Erstellung
+  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   ownerCompany  Company? @relation("CompanyEmailSettings", fields: [companyId], references: [id])
+  autoAssignTo  User?    @relation("EmailAutoAssign", fields: [autoAssignToUserId], references: [id])
+  messages      EmailMessage[]
 
   @@index([companyId])
+  @@index([accountType])
+}
+
+// ============================================
+// E-MAIL NACHRICHTEN
+// ============================================
+
+model EmailMessage {
+  id              String    @id @default(cuid())
+  companyId       String?   // Multi-tenant
+  emailSettingsId String
+  
+  // E-Mail Identifikation
+  messageId       String    // IMAP Message-ID
+  threadId        String?   // Fuer Konversations-Gruppierung (basierend auf References/In-Reply-To)
+  folder          String    @default("INBOX")
+  
+  // Absender und Empfaenger
+  fromAddress     String
+  fromName        String?
+  toAddress       String
+  toName          String?
+  cc              String?
+  bcc             String?
+  replyTo         String?
+  
+  // Inhalt
+  subject         String
+  bodyText        String?   @db.Text
+  bodyHtml        String?   @db.Text
+  snippet         String?   // Kurzvorschau (erste 200 Zeichen)
+  
+  // Metadaten
+  receivedAt      DateTime
+  sentAt          DateTime?
+  isRead          Boolean   @default(false)
+  isStarred       Boolean   @default(false)
+  isDeleted       Boolean   @default(false)
+  hasAttachments  Boolean   @default(false)
+  
+  // Ticket-Verknuepfung
+  ticketId        String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  emailSettings   EmailSettings @relation(fields: [emailSettingsId], references: [id], onDelete: Cascade)
+  ticket          Ticket?       @relation("TicketEmails", fields: [ticketId], references: [id])
+  attachments     EmailAttachment[]
+
+  @@unique([emailSettingsId, messageId])
+  @@index([companyId])
+  @@index([emailSettingsId])
+  @@index([threadId])
+  @@index([ticketId])
+  @@index([receivedAt])
+  @@index([isRead])
+  @@index([folder])
+}
+
+model EmailAttachment {
+  id              String   @id @default(cuid())
+  emailMessageId  String
+  filename        String
+  originalName    String
+  mimeType        String
+  size            Int
+  path            String   // Speicherpfad
+  contentId       String?  // Fuer inline Bilder
+  createdAt       DateTime @default(now())
+
+  emailMessage    EmailMessage @relation(fields: [emailMessageId], references: [id], onDelete: Cascade)
+
+  @@index([emailMessageId])
 }
 
 // ============================================
