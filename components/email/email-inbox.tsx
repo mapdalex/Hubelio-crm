@@ -190,6 +190,28 @@ export function EmailInbox({ accounts, initialEmails }: EmailInboxProps) {
     }
   }
 
+  // Create ticket from email
+  const handleCreateTicket = async (emailId: string) => {
+    try {
+      const response = await fetch(`/api/emails/${emailId}/create-ticket`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Fehler beim Erstellen')
+      }
+      
+      const data = await response.json()
+      toast.success(`Ticket ${data.ticket.ticketNumber} erstellt`)
+      mutate(`/api/emails?accountId=${selectedAccount}&folder=${selectedFolder}`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Fehler beim Erstellen des Tickets')
+    }
+  }
+
   // Reply to email
   const handleReply = (email: Email) => {
     setReplyTo(email)
@@ -485,6 +507,12 @@ export function EmailInbox({ accounts, initialEmails }: EmailInboxProps) {
                       </>
                     )}
                   </DropdownMenuItem>
+                  {!selectedEmailData.ticket && (
+                    <DropdownMenuItem onClick={() => handleCreateTicket(selectedEmailData.id)}>
+                      <Ticket className="h-4 w-4 mr-2" />
+                      Ticket erstellen
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={() => handleDelete(selectedEmailData.id)}
