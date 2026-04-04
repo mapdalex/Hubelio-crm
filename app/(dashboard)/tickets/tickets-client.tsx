@@ -72,7 +72,7 @@ const priorityLabels: Record<string, string> = {
 
 export default function TicketsClient() {
   const searchParams = useSearchParams()
-  const { user } = useAuth()
+  const { user, companyRole, isSuperAdmin } = useAuth()
   const [tickets, setTickets] = useState<TicketItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -81,7 +81,8 @@ export default function TicketsClient() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   
-  const isEmployee = user && ['ADMIN', 'MITARBEITER', 'BUCHHALTUNG'].includes(user.role)
+  // Check if user can manage tickets (company members or superadmin)
+  const isEmployee = isSuperAdmin() || (companyRole && ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER'].includes(companyRole))
   
   const loadTickets = useCallback(async () => {
     setIsLoading(true)
