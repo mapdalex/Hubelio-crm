@@ -86,7 +86,7 @@ const priorityLabels: Record<string, string> = {
 export default function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, companyRole, companyId, isSuperAdmin } = useAuth()
   const [ticket, setTicket] = useState<Ticket | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [newComment, setNewComment] = useState('')
@@ -94,7 +94,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [employees, setEmployees] = useState<{ id: string; name: string }[]>([])
   
-  const isEmployee = user && ['ADMIN', 'MITARBEITER', 'BUCHHALTUNG'].includes(user.role)
+  // Check if user can manage tickets (company members or superadmin)
+  const isEmployee = isSuperAdmin() || (companyRole && ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER'].includes(companyRole))
   
   const loadTicket = useCallback(async () => {
     try {
@@ -109,15 +110,20 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   }, [id])
   
   const loadEmployees = useCallback(async () => {
-    if (!isEmployee) return
+    if (!isEmployee || !companyId) return
     try {
-      const res = await fetch('/api/users?role=employee')
+      // Load only members of this company
+      const res = await fetch(`/api/companies/${companyId}`)
       const data = await res.json()
-      setEmployees(data.users || [])
+      const members = (data.company?.companyUsers || []).map((cu: { user: { id: string; name: string } }) => ({
+        id: cu.user.id,
+        name: cu.user.name,
+      }))
+      setEmployees(members)
     } catch (error) {
-      console.error('Error loading employees:', error)
+      console.error('Error loading company members:', error)
     }
-  }, [isEmployee])
+  }, [isEmployee, companyId])
   
   useEffect(() => {
     loadTicket()
@@ -342,14 +348,14 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 <div className="grid gap-2">
                   <Label>Zugewiesen an</Label>
                   <Select 
-                    value={ticket.assignedTo?.id || ''} 
-                    onValueChange={handleAssigneeChange}
+                    value={ticket.assignedTo?.id || '_none'} 
+                    onValueChange={(value) => handleAssigneeChange(value === '_none' ? '' : value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Nicht zugewiesen" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nicht zugewiesen</SelectItem>
+                      <SelectItem value="_none">Nicht zugewiesen</SelectItem>
                       {employees.map((emp) => (
                         <SelectItem key={emp.id} value={emp.id}>
                           {emp.name}
