@@ -3,8 +3,8 @@
 
 FROM node:20-alpine AS base
 
-# pnpm global installieren
-RUN npm install -g pnpm@9
+# pnpm global installieren (exakte Version wie in package.json)
+RUN npm install -g pnpm@9.15.0
 
 # Dependencies installieren
 FROM base AS deps
@@ -15,8 +15,8 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma/
 
-# Dependencies installieren
-RUN pnpm install --frozen-lockfile
+# Dependencies installieren (mit retry bei Netzwerkproblemen)
+RUN pnpm install --frozen-lockfile || (sleep 5 && pnpm install --frozen-lockfile)
 
 # Builder Stage
 FROM base AS builder
