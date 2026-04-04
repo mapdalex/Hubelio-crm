@@ -15,12 +15,12 @@ export async function PUT(
     const { id: companyId, emailId } = await params
     const data = await request.json()
 
-    // Verify user is admin of this company
+    // Verify user is admin or owner of this company
     const companyUser = await db.companyUser.findFirst({
       where: {
         userId: session.userId,
         companyId,
-        role: 'ADMIN',
+        role: { in: ['OWNER', 'ADMIN'] },
       },
     })
 
@@ -87,12 +87,12 @@ export async function DELETE(
 
     const { id: companyId, emailId } = await params
 
-    // Verify user is admin
+    // Verify user is admin or owner
     const companyUser = await db.companyUser.findFirst({
       where: {
         userId: session.userId,
         companyId,
-        role: 'ADMIN',
+        role: { in: ['OWNER', 'ADMIN'] },
       },
     })
 
