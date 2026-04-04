@@ -184,6 +184,7 @@ const adminNavItems: NavItem[] = [
       { title: 'Module', url: '/settings/modules', icon: Lock },
       { title: 'Benutzer', url: '/settings/users', icon: Users },
       { title: 'E-Mail', url: '/settings/email', icon: Mail },
+      { title: 'Social Media', url: '/settings/social', icon: Share2 },
       { title: 'System', url: '/settings/system', icon: Settings },
     ],
   },
