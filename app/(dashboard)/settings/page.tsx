@@ -32,13 +32,6 @@ const settingsSections = [
     role: ['ADMIN'],
   },
   {
-    title: 'Module',
-    description: 'Verwalten Sie verfügbare Module und Abonnements',
-    icon: Shield,
-    href: '/settings/modules',
-    role: ['ADMIN'],
-  },
-  {
     title: 'Benutzer',
     description: 'Benutzerverwaltung und Rollen',
     icon: Users,
