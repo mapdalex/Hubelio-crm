@@ -285,8 +285,8 @@ export function EmailInbox({ accounts, initialEmails }: EmailInboxProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customerId: ticketForm.customerId || null,
-          assignedToId: ticketForm.assignedToId || null,
+          customerId: ticketForm.customerId && ticketForm.customerId !== '_none' ? ticketForm.customerId : null,
+          assignedToId: ticketForm.assignedToId && ticketForm.assignedToId !== '_none' ? ticketForm.assignedToId : null,
           priority: ticketForm.priority,
           subject: ticketForm.subject,
           description: ticketForm.description,
@@ -679,7 +679,7 @@ export function EmailInbox({ accounts, initialEmails }: EmailInboxProps) {
                     <SelectValue placeholder="Kunde auswaehlen..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Kein Kunde</SelectItem>
+                    <SelectItem value="_none">Kein Kunde</SelectItem>
                     {customers.map((customer) => (
                       <SelectItem key={customer.id} value={customer.id}>
                         {customer.companyName || `${customer.firstName} ${customer.lastName}`}
@@ -701,7 +701,7 @@ export function EmailInbox({ accounts, initialEmails }: EmailInboxProps) {
                     <SelectValue placeholder="Mitarbeiter auswaehlen..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nicht zugewiesen</SelectItem>
+                    <SelectItem value="_none">Nicht zugewiesen</SelectItem>
                     {users.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.name}
