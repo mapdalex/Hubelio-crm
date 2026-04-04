@@ -658,111 +658,116 @@ export function EmailInbox({ accounts, initialEmails, companyId }: EmailInboxPro
 
       {/* Create Ticket Dialog */}
       <Dialog open={isTicketDialogOpen} onOpenChange={setIsTicketDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="w-full max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0">
+          {/* Fixed Header */}
+          <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
             <DialogTitle>Ticket aus E-Mail erstellen</DialogTitle>
             <DialogDescription>
               Erstellen Sie ein Support-Ticket aus dieser E-Mail
             </DialogDescription>
           </DialogHeader>
 
-          {ticketEmail && (
-            <div className="space-y-4">
-              {/* Email Info */}
-              <div className="p-3 rounded-lg bg-muted/50 space-y-1">
-                <p className="text-sm font-medium">Von: {ticketEmail.fromName || ticketEmail.fromAddress}</p>
-                <p className="text-xs text-muted-foreground">{ticketEmail.fromAddress}</p>
-              </div>
+          {/* Scrollable Body */}
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            {ticketEmail && (
+              <div className="space-y-4">
+                {/* Email Info */}
+                <div className="p-3 rounded-lg bg-muted/50 space-y-1">
+                  <p className="text-sm font-medium">Von: {ticketEmail.fromName || ticketEmail.fromAddress}</p>
+                  <p className="text-xs text-muted-foreground">{ticketEmail.fromAddress}</p>
+                </div>
 
-              {/* Customer Selection */}
-              <div className="grid gap-2">
-                <Label htmlFor="customerId">Kunde</Label>
-                <Select 
-                  value={ticketForm.customerId} 
-                  onValueChange={(value) => setTicketForm(prev => ({ ...prev, customerId: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Kunde auswaehlen..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none">Kein Kunde</SelectItem>
-                    {customers.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        {customer.companyName || `${customer.firstName} ${customer.lastName}`}
-                        {customer.email && ` (${customer.email})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                {/* Customer Selection */}
+                <div className="grid gap-2">
+                  <Label htmlFor="customerId">Kunde</Label>
+                  <Select 
+                    value={ticketForm.customerId || '_none'} 
+                    onValueChange={(value) => setTicketForm(prev => ({ ...prev, customerId: value === '_none' ? '' : value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Kunde auswaehlen..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">Kein Kunde</SelectItem>
+                      {customers.map((customer) => (
+                        <SelectItem key={customer.id} value={customer.id}>
+                          {customer.companyName || `${customer.firstName} ${customer.lastName}`}
+                          {customer.email && ` (${customer.email})`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              {/* Assigned To */}
-              <div className="grid gap-2">
-                <Label htmlFor="assignedToId">Zuweisen an</Label>
-                <Select 
-                  value={ticketForm.assignedToId} 
-                  onValueChange={(value) => setTicketForm(prev => ({ ...prev, assignedToId: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Mitarbeiter auswaehlen..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none">Nicht zugewiesen</SelectItem>
-                    {users.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                {/* Assigned To */}
+                <div className="grid gap-2">
+                  <Label htmlFor="assignedToId">Zuweisen an</Label>
+                  <Select 
+                    value={ticketForm.assignedToId || '_none'} 
+                    onValueChange={(value) => setTicketForm(prev => ({ ...prev, assignedToId: value === '_none' ? '' : value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Mitarbeiter auswaehlen..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">Nicht zugewiesen</SelectItem>
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              {/* Priority */}
-              <div className="grid gap-2">
-                <Label htmlFor="priority">Prioritaet</Label>
-                <Select 
-                  value={ticketForm.priority} 
-                  onValueChange={(value) => setTicketForm(prev => ({ ...prev, priority: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Prioritaet auswaehlen..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="LOW">Niedrig</SelectItem>
-                    <SelectItem value="MEDIUM">Mittel</SelectItem>
-                    <SelectItem value="HIGH">Hoch</SelectItem>
-                    <SelectItem value="URGENT">Dringend</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                {/* Priority */}
+                <div className="grid gap-2">
+                  <Label htmlFor="priority">Prioritaet</Label>
+                  <Select 
+                    value={ticketForm.priority} 
+                    onValueChange={(value) => setTicketForm(prev => ({ ...prev, priority: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Prioritaet auswaehlen..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="LOW">Niedrig</SelectItem>
+                      <SelectItem value="MEDIUM">Mittel</SelectItem>
+                      <SelectItem value="HIGH">Hoch</SelectItem>
+                      <SelectItem value="URGENT">Dringend</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              {/* Subject */}
-              <div className="grid gap-2">
-                <Label htmlFor="subject">Betreff</Label>
-                <input
-                  id="subject"
-                  type="text"
-                  value={ticketForm.subject}
-                  onChange={(e) => setTicketForm(prev => ({ ...prev, subject: e.target.value }))}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                />
-              </div>
+                {/* Subject */}
+                <div className="grid gap-2">
+                  <Label htmlFor="subject">Betreff</Label>
+                  <input
+                    id="subject"
+                    type="text"
+                    value={ticketForm.subject}
+                    onChange={(e) => setTicketForm(prev => ({ ...prev, subject: e.target.value }))}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                </div>
 
-              {/* Description */}
-              <div className="grid gap-2">
-                <Label htmlFor="description">Beschreibung</Label>
-                <Textarea
-                  id="description"
-                  value={ticketForm.description}
-                  onChange={(e) => setTicketForm(prev => ({ ...prev, description: e.target.value }))}
-                  rows={4}
-                  className="resize-none"
-                />
+                {/* Description */}
+                <div className="grid gap-2">
+                  <Label htmlFor="description">Beschreibung</Label>
+                  <Textarea
+                    id="description"
+                    value={ticketForm.description}
+                    onChange={(e) => setTicketForm(prev => ({ ...prev, description: e.target.value }))}
+                    rows={6}
+                    className="resize-none"
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          <DialogFooter>
+          {/* Fixed Footer */}
+          <div className="px-6 py-4 border-t flex-shrink-0 flex justify-end gap-2">
             <Button variant="outline" onClick={() => setIsTicketDialogOpen(false)}>
               Abbrechen
             </Button>
@@ -776,7 +781,7 @@ export function EmailInbox({ accounts, initialEmails, companyId }: EmailInboxPro
                 'Ticket erstellen'
               )}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
