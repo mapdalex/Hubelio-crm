@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -55,7 +54,7 @@ interface SocialStats {
 }
 
 export default function SocialsDashboardPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
 
@@ -63,17 +62,14 @@ export default function SocialsDashboardPage() {
     setMounted(true)
   }, [])
 
-  if (!session?.user?.companyId) {
-    return null
-  }
-
   const { data: stats, isLoading } = useSWR<SocialStats>(
-    mounted ? `/api/social/stats` : null,
+    mounted && session?.user?.companyId ? `/api/social/stats` : null,
     fetcher,
     { revalidateOnFocus: false }
   )
 
-  if (!mounted || isLoading) {
+  // Show loading state during SSR and initial hydration
+  if (!mounted || status === 'loading') {
     return (
       <div className="space-y-6">
         <div>
@@ -95,6 +91,10 @@ export default function SocialsDashboardPage() {
         </div>
       </div>
     )
+  }
+
+  if (!session?.user?.companyId) {
+    return null
   }
 
   return (
