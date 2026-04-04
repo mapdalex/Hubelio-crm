@@ -38,8 +38,38 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { EmailComposer } from './email-composer'
 import { EmailThread } from './email-thread'
+
+interface Customer {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  companyName: string | null
+}
+
+interface User {
+  id: string
+  name: string
+}
 
 interface EmailAccount {
   id: string
@@ -103,6 +133,20 @@ export function EmailInbox({ accounts, initialEmails }: EmailInboxProps) {
   const [isComposing, setIsComposing] = useState(false)
   const [replyTo, setReplyTo] = useState<Email | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
+  
+  // Ticket creation dialog state
+  const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false)
+  const [ticketEmail, setTicketEmail] = useState<Email | null>(null)
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [users, setUsers] = useState<User[]>([])
+  const [isCreatingTicket, setIsCreatingTicket] = useState(false)
+  const [ticketForm, setTicketForm] = useState({
+    customerId: '',
+    assignedToId: '',
+    priority: 'MEDIUM',
+    subject: '',
+    description: '',
+  })
 
   // Fetch emails for selected account/folder
   const { data, error, isLoading } = useSWR(
@@ -190,13 +234,63 @@ export function EmailInbox({ accounts, initialEmails }: EmailInboxProps) {
     }
   }
 
-  // Create ticket from email
-  const handleCreateTicket = async (emailId: string) => {
+  // Open ticket creation dialog
+  const openTicketDialog = async (email: Email) => {
+    setTicketEmail(email)
+    setTicketForm({
+      customerId: '',
+      assignedToId: '',
+      priority: 'MEDIUM',
+      subject: email.subject,
+      description: email.bodyText || email.snippet || '',
+    })
+    setIsTicketDialogOpen(true)
+    
+    // Load customers and users
     try {
-      const response = await fetch(`/api/emails/${emailId}/create-ticket`, {
+      const [customersRes, usersRes] = await Promise.all([
+        fetch('/api/customers'),
+        fetch('/api/users'),
+      ])
+      
+      if (customersRes.ok) {
+        const data = await customersRes.json()
+        setCustomers(data.customers || [])
+        
+        // Try to match customer by email
+        const matchedCustomer = (data.customers || []).find(
+          (c: Customer) => c.email?.toLowerCase() === email.fromAddress.toLowerCase()
+        )
+        if (matchedCustomer) {
+          setTicketForm(prev => ({ ...prev, customerId: matchedCustomer.id }))
+        }
+      }
+      
+      if (usersRes.ok) {
+        const data = await usersRes.json()
+        setUsers(data.users || [])
+      }
+    } catch (error) {
+      console.error('Error loading data for ticket dialog:', error)
+    }
+  }
+
+  // Create ticket from email
+  const handleCreateTicket = async () => {
+    if (!ticketEmail) return
+    
+    setIsCreatingTicket(true)
+    try {
+      const response = await fetch(`/api/emails/${ticketEmail.id}/create-ticket`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          customerId: ticketForm.customerId || null,
+          assignedToId: ticketForm.assignedToId || null,
+          priority: ticketForm.priority,
+          subject: ticketForm.subject,
+          description: ticketForm.description,
+        }),
       })
       
       if (!response.ok) {
@@ -206,9 +300,13 @@ export function EmailInbox({ accounts, initialEmails }: EmailInboxProps) {
       
       const data = await response.json()
       toast.success(`Ticket ${data.ticket.ticketNumber} erstellt`)
+      setIsTicketDialogOpen(false)
+      setTicketEmail(null)
       mutate(`/api/emails?accountId=${selectedAccount}&folder=${selectedFolder}`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Fehler beim Erstellen des Tickets')
+    } finally {
+      setIsCreatingTicket(false)
     }
   }
 
@@ -508,7 +606,7 @@ export function EmailInbox({ accounts, initialEmails }: EmailInboxProps) {
                     )}
                   </DropdownMenuItem>
                   {!selectedEmailData.ticket && (
-                    <DropdownMenuItem onClick={() => handleCreateTicket(selectedEmailData.id)}>
+                    <DropdownMenuItem onClick={() => openTicketDialog(selectedEmailData)}>
                       <Ticket className="h-4 w-4 mr-2" />
                       Ticket erstellen
                     </DropdownMenuItem>
@@ -551,6 +649,130 @@ export function EmailInbox({ accounts, initialEmails }: EmailInboxProps) {
           }}
         />
       )}
+
+      {/* Create Ticket Dialog */}
+      <Dialog open={isTicketDialogOpen} onOpenChange={setIsTicketDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Ticket aus E-Mail erstellen</DialogTitle>
+            <DialogDescription>
+              Erstellen Sie ein Support-Ticket aus dieser E-Mail
+            </DialogDescription>
+          </DialogHeader>
+
+          {ticketEmail && (
+            <div className="space-y-4">
+              {/* Email Info */}
+              <div className="p-3 rounded-lg bg-muted/50 space-y-1">
+                <p className="text-sm font-medium">Von: {ticketEmail.fromName || ticketEmail.fromAddress}</p>
+                <p className="text-xs text-muted-foreground">{ticketEmail.fromAddress}</p>
+              </div>
+
+              {/* Customer Selection */}
+              <div className="grid gap-2">
+                <Label htmlFor="customerId">Kunde</Label>
+                <Select 
+                  value={ticketForm.customerId} 
+                  onValueChange={(value) => setTicketForm(prev => ({ ...prev, customerId: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Kunde auswaehlen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Kein Kunde</SelectItem>
+                    {customers.map((customer) => (
+                      <SelectItem key={customer.id} value={customer.id}>
+                        {customer.companyName || `${customer.firstName} ${customer.lastName}`}
+                        {customer.email && ` (${customer.email})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Assigned To */}
+              <div className="grid gap-2">
+                <Label htmlFor="assignedToId">Zuweisen an</Label>
+                <Select 
+                  value={ticketForm.assignedToId} 
+                  onValueChange={(value) => setTicketForm(prev => ({ ...prev, assignedToId: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Mitarbeiter auswaehlen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nicht zugewiesen</SelectItem>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Priority */}
+              <div className="grid gap-2">
+                <Label htmlFor="priority">Prioritaet</Label>
+                <Select 
+                  value={ticketForm.priority} 
+                  onValueChange={(value) => setTicketForm(prev => ({ ...prev, priority: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Prioritaet auswaehlen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="LOW">Niedrig</SelectItem>
+                    <SelectItem value="MEDIUM">Mittel</SelectItem>
+                    <SelectItem value="HIGH">Hoch</SelectItem>
+                    <SelectItem value="URGENT">Dringend</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Subject */}
+              <div className="grid gap-2">
+                <Label htmlFor="subject">Betreff</Label>
+                <input
+                  id="subject"
+                  type="text"
+                  value={ticketForm.subject}
+                  onChange={(e) => setTicketForm(prev => ({ ...prev, subject: e.target.value }))}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+              </div>
+
+              {/* Description */}
+              <div className="grid gap-2">
+                <Label htmlFor="description">Beschreibung</Label>
+                <Textarea
+                  id="description"
+                  value={ticketForm.description}
+                  onChange={(e) => setTicketForm(prev => ({ ...prev, description: e.target.value }))}
+                  rows={4}
+                  className="resize-none"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTicketDialogOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button onClick={handleCreateTicket} disabled={isCreatingTicket}>
+              {isCreatingTicket ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Erstelle...
+                </>
+              ) : (
+                'Ticket erstellen'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
