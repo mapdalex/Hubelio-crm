@@ -15,7 +15,7 @@ export async function GET(
     const { id: companyId } = await params
 
     // Check company access
-    const companyUser = await prisma.companyUser.findUnique({
+    const companyUser = await db.companyUser.findUnique({
       where: {
         userId_companyId: {
           userId: user.id,
@@ -29,12 +29,12 @@ export async function GET(
     }
 
     // Zähle verbundene Accounts
-    const connectedAccounts = await prisma.socialAccount.findMany({
+    const connectedAccounts = await db.socialAccount.findMany({
       where: { companyId, isActive: true },
     })
 
     // Zähle geplante Posts
-    const scheduledPostsCount = await prisma.socialPost.count({
+    const scheduledPostsCount = await db.socialPost.count({
       where: {
         companyId,
         status: 'SCHEDULED',
@@ -45,7 +45,7 @@ export async function GET(
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
     const monthEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
 
-    const publishedThisMonthCount = await prisma.socialPost.count({
+    const publishedThisMonthCount = await db.socialPost.count({
       where: {
         companyId,
         status: 'PUBLISHED',
@@ -57,7 +57,7 @@ export async function GET(
     })
 
     // Hole letzte Posts
-    const recentPosts = await prisma.socialPost.findMany({
+    const recentPosts = await db.socialPost.findMany({
       where: { companyId },
       select: {
         id: true,
