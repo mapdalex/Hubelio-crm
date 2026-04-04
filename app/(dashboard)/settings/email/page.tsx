@@ -100,14 +100,22 @@ export default function EmailSettingsPage() {
   }
 
   const loadUsers = async () => {
+    if (!companyId) return
+    
     try {
-      const res = await fetch('/api/users')
+      // Load only members of this company, not all users
+      const res = await fetch(`/api/companies/${companyId}`)
       if (res.ok) {
         const data = await res.json()
-        setUsers(data.users || [])
+        const members = (data.company?.companyUsers || []).map((cu: { user: { id: string; name: string; email: string } }) => ({
+          id: cu.user.id,
+          name: cu.user.name,
+          email: cu.user.email,
+        }))
+        setUsers(members)
       }
     } catch (error) {
-      console.error('Error loading users:', error)
+      console.error('Error loading company members:', error)
     }
   }
 
