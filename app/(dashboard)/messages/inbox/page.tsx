@@ -83,7 +83,8 @@ async function EmailInboxData() {
 
   return (
     <EmailInbox 
-      accounts={accountStats} 
+      accounts={accountStats}
+      companyId={companyId || undefined}
       initialEmails={recentEmails.map(email => ({
         ...email,
         receivedAt: email.receivedAt?.toISOString() || null,

@@ -71,6 +71,11 @@ interface User {
   name: string
 }
 
+interface EmailInboxProps {
+  accounts: EmailAccount[]
+  companyId?: string
+}
+
 interface EmailAccount {
   id: string
   name: string
@@ -123,7 +128,7 @@ const fetcher = (url: string) => fetch(url).then(res => res.json())
 
 type Folder = 'INBOX' | 'SENT' | 'STARRED' | 'TRASH'
 
-export function EmailInbox({ accounts, initialEmails }: EmailInboxProps) {
+export function EmailInbox({ accounts, initialEmails, companyId }: EmailInboxProps & { initialEmails?: Email[]; companyId?: string }) {
   const [selectedAccount, setSelectedAccount] = useState<string | null>(
     accounts.length === 1 ? accounts[0].id : null
   )
@@ -246,18 +251,14 @@ export function EmailInbox({ accounts, initialEmails }: EmailInboxProps) {
     })
     setIsTicketDialogOpen(true)
     
-    // Load customers and users
+    // Load customers and company members only
     try {
-      const [customersRes, usersRes] = await Promise.all([
-        fetch('/api/customers'),
-        fetch('/api/users'),
-      ])
-      
+      const customersRes = await fetch('/api/customers')
       if (customersRes.ok) {
         const data = await customersRes.json()
         setCustomers(data.customers || [])
         
-        // Try to match customer by email
+        // Try to match customer by email automatically
         const matchedCustomer = (data.customers || []).find(
           (c: Customer) => c.email?.toLowerCase() === email.fromAddress.toLowerCase()
         )
@@ -266,9 +267,14 @@ export function EmailInbox({ accounts, initialEmails }: EmailInboxProps) {
         }
       }
       
-      if (usersRes.ok) {
-        const data = await usersRes.json()
-        setUsers(data.users || [])
+      // Load only members of THIS company, not all users
+      if (companyId) {
+        const companyRes = await fetch(`/api/companies/${companyId}`)
+        if (companyRes.ok) {
+          const data = await companyRes.json()
+          const members = (data.company?.companyUsers || []).map((cu: { user: { id: string; name: string } }) => cu.user)
+          setUsers(members)
+        }
       }
     } catch (error) {
       console.error('Error loading data for ticket dialog:', error)
@@ -553,8 +559,8 @@ export function EmailInbox({ accounts, initialEmails }: EmailInboxProps) {
 
       {/* Email Detail / Thread View */}
       {selectedEmailData && (
-        <Card className="w-[500px] flex-shrink-0">
-          <CardHeader className="pb-2">
+        <Card className="w-[500px] flex-shrink-0 flex flex-col" style={{ height: 'calc(100vh - 160px)' }}>
+          <CardHeader className="pb-2 flex-shrink-0">
             <div className="flex items-center gap-2">
               <Button 
                 variant="ghost" 
@@ -623,8 +629,8 @@ export function EmailInbox({ accounts, initialEmails }: EmailInboxProps) {
               </DropdownMenu>
             </div>
           </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[calc(100vh-320px)]">
+          <CardContent className="p-0 flex-1 min-h-0">
+            <ScrollArea className="h-full">
               <EmailThread email={selectedEmailData} onReply={handleReply} />
             </ScrollArea>
           </CardContent>
