@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { prisma } from '@/lib/prisma'
+import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 
 type Platform = 'instagram' | 'facebook' | 'tiktok' | 'linkedin'
@@ -230,7 +230,7 @@ export async function GET(
       : null
 
     // Save or update account in database
-    const existingAccount = await prisma.socialAccount.findFirst({
+    const existingAccount = await db.socialAccount.findFirst({
       where: {
         companyId,
         platform: platformLower.toUpperCase() as 'INSTAGRAM' | 'FACEBOOK' | 'TIKTOK' | 'LINKEDIN',
@@ -239,7 +239,7 @@ export async function GET(
     })
 
     if (existingAccount) {
-      await prisma.socialAccount.update({
+      await db.socialAccount.update({
         where: { id: existingAccount.id },
         data: {
           accessToken: tokenData.accessToken,
@@ -252,7 +252,7 @@ export async function GET(
         },
       })
     } else {
-      await prisma.socialAccount.create({
+      await db.socialAccount.create({
         data: {
           companyId,
           platform: platformLower.toUpperCase() as 'INSTAGRAM' | 'FACEBOOK' | 'TIKTOK' | 'LINKEDIN',

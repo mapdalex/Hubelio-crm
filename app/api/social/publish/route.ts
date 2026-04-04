@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { db } from '@/lib/db'
 import { getPublisher } from '@/lib/social/platforms'
 
 // POST /api/social/publish
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     // Find all scheduled posts that are due
     const now = new Date()
-    const postsToPublish = await prisma.socialPost.findMany({
+    const postsToPublish = await db.socialPost.findMany({
       where: {
         status: 'SCHEDULED',
         scheduledFor: {
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     for (const post of postsToPublish) {
       // Update status to PUBLISHING
-      await prisma.socialPost.update({
+      await db.socialPost.update({
         where: { id: post.id },
         data: { status: 'PUBLISHING' },
       })
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
         
         if (!account.isActive) {
           // Skip inactive accounts
-          await prisma.socialPostAccount.update({
+          await db.socialPostAccount.update({
             where: { id: targetAccount.id },
             data: {
               status: 'failed',
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
           })
 
           // Update target account status
-          await prisma.socialPostAccount.update({
+          await db.socialPostAccount.update({
             where: { id: targetAccount.id },
             data: {
               status: result.success ? 'published' : 'failed',
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error'
           
-          await prisma.socialPostAccount.update({
+          await db.socialPostAccount.update({
             where: { id: targetAccount.id },
             data: {
               status: 'failed',
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
       // Update post status based on results
       const finalStatus = allSucceeded ? 'PUBLISHED' : 'FAILED'
       
-      await prisma.socialPost.update({
+      await db.socialPost.update({
         where: { id: post.id },
         data: {
           status: finalStatus,

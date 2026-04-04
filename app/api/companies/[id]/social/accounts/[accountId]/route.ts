@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 
 // GET /api/companies/[id]/social/accounts/[accountId]
@@ -16,7 +16,7 @@ export async function GET(
     const { id, accountId } = await params
 
     // Check company access
-    const companyUser = await prisma.companyUser.findUnique({
+    const companyUser = await db.companyUser.findUnique({
       where: {
         userId_id: {
           userId: user.id,
@@ -29,7 +29,7 @@ export async function GET(
       return NextResponse.json({ error: 'Kein Zugriff auf diese Firma' }, { status: 403 })
     }
 
-    const account = await prisma.socialAccount.findFirst({
+    const account = await db.socialAccount.findFirst({
       where: { 
         id: accountId,
         id,
@@ -63,7 +63,7 @@ export async function PATCH(
     const { id, accountId } = await params
 
     // Check company access and role
-    const companyUser = await prisma.companyUser.findUnique({
+    const companyUser = await db.companyUser.findUnique({
       where: {
         userId_id: {
           userId: user.id,
@@ -83,7 +83,7 @@ export async function PATCH(
     const body = await request.json()
     const { isActive, accountName } = body
 
-    const account = await prisma.socialAccount.update({
+    const account = await db.socialAccount.update({
       where: { 
         id: accountId,
         id, // Ensure account belongs to this company
@@ -118,7 +118,7 @@ export async function DELETE(
     const { id, accountId } = await params
 
     // Check company access and role (only ADMIN and OWNER can delete)
-    const companyUser = await prisma.companyUser.findUnique({
+    const companyUser = await db.companyUser.findUnique({
       where: {
         userId_id: {
           userId: user.id,
@@ -136,7 +136,7 @@ export async function DELETE(
     }
 
     // Verify account exists and belongs to company
-    const account = await prisma.socialAccount.findFirst({
+    const account = await db.socialAccount.findFirst({
       where: {
         id: accountId,
         id,
@@ -148,7 +148,7 @@ export async function DELETE(
     }
 
     // Delete the account (cascades to SocialPostAccount)
-    await prisma.socialAccount.delete({
+    await db.socialAccount.delete({
       where: { id: accountId },
     })
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
-import { SocialPostStatus, SocialPostType } from '@prisma/client'
+import { SocialPostStatus, SocialPostType } from '@db/client'
 
 // GET /api/companies/[id]/social/posts - Liste aller Social Posts
 export async function GET(
@@ -27,7 +27,7 @@ export async function GET(
     const limit = parseInt(searchParams.get('limit') || '20')
 
     // Check company access
-    const companyUser = await prisma.companyUser.findUnique({
+    const companyUser = await db.companyUser.findUnique({
       where: {
         userId_id: {
           userId: user.id,
@@ -53,11 +53,11 @@ export async function GET(
     }
 
     // Get total count
-    let totalCount = await prisma.socialPost.count({ where })
+    let totalCount = await db.socialPost.count({ where })
 
     // If filtering by account, we need to join through SocialPostAccount
     if (accountId) {
-      const postsWithAccount = await prisma.socialPostAccount.findMany({
+      const postsWithAccount = await db.socialPostAccount.findMany({
         where: { accountId },
         select: { postId: true },
       })
@@ -66,7 +66,7 @@ export async function GET(
       totalCount = postIds.length
     }
 
-    const posts = await prisma.socialPost.findMany({
+    const posts = await db.socialPost.findMany({
       where,
       include: {
         createdBy: {
@@ -126,7 +126,7 @@ export async function POST(
     const { id } = await params
 
     // Check company access
-    const companyUser = await prisma.companyUser.findUnique({
+    const companyUser = await db.companyUser.findUnique({
       where: {
         userId_id: {
           userId: user.id,
@@ -151,7 +151,7 @@ export async function POST(
     }
 
     // Verify accounts belong to this company
-    const accounts = await prisma.socialAccount.findMany({
+    const accounts = await db.socialAccount.findMany({
       where: {
         id: { in: accountIds },
         id,
@@ -164,7 +164,7 @@ export async function POST(
     }
 
     // Create post with media and account connections
-    const post = await prisma.socialPost.create({
+    const post = await db.socialPost.create({
       data: {
         id,
         content: content.trim(),

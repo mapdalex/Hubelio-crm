@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 
 // GET /api/companies/[id]/social/posts/[postId]
@@ -16,7 +16,7 @@ export async function GET(
     const { id, postId } = await params
 
     // Check company access
-    const companyUser = await prisma.companyUser.findUnique({
+    const companyUser = await db.companyUser.findUnique({
       where: {
         userId_id: {
           userId: user.id,
@@ -29,7 +29,7 @@ export async function GET(
       return NextResponse.json({ error: 'Kein Zugriff auf diese Firma' }, { status: 403 })
     }
 
-    const post = await prisma.socialPost.findFirst({
+    const post = await db.socialPost.findFirst({
       where: {
         id: postId,
         id,
@@ -85,7 +85,7 @@ export async function PATCH(
     const { id, postId } = await params
 
     // Check company access
-    const companyUser = await prisma.companyUser.findUnique({
+    const companyUser = await db.companyUser.findUnique({
       where: {
         userId_id: {
           userId: user.id,
@@ -99,7 +99,7 @@ export async function PATCH(
     }
 
     // Get existing post
-    const existingPost = await prisma.socialPost.findFirst({
+    const existingPost = await db.socialPost.findFirst({
       where: {
         id: postId,
         id,
@@ -146,13 +146,13 @@ export async function PATCH(
     // Handle media updates if provided
     if (media !== undefined) {
       // Delete existing media
-      await prisma.socialMedia.deleteMany({
+      await db.socialMedia.deleteMany({
         where: { postId },
       })
 
       // Create new media
       if (media.length > 0) {
-        await prisma.socialMedia.createMany({
+        await db.socialMedia.createMany({
           data: media.map((m: { type: string; url: string; thumbnail?: string; altText?: string; duration?: number; width?: number; height?: number }, index: number) => ({
             postId,
             type: m.type,
@@ -171,7 +171,7 @@ export async function PATCH(
     // Handle account updates if provided
     if (accountIds !== undefined) {
       // Verify accounts belong to this company
-      const accounts = await prisma.socialAccount.findMany({
+      const accounts = await db.socialAccount.findMany({
         where: {
           id: { in: accountIds },
           id,
@@ -184,12 +184,12 @@ export async function PATCH(
       }
 
       // Delete existing account connections
-      await prisma.socialPostAccount.deleteMany({
+      await db.socialPostAccount.deleteMany({
         where: { postId },
       })
 
       // Create new account connections
-      await prisma.socialPostAccount.createMany({
+      await db.socialPostAccount.createMany({
         data: accountIds.map((accountId: string) => ({
           postId,
           accountId,
@@ -198,7 +198,7 @@ export async function PATCH(
       })
     }
 
-    const post = await prisma.socialPost.update({
+    const post = await db.socialPost.update({
       where: { id: postId },
       data: updateData,
       include: {
@@ -239,7 +239,7 @@ export async function DELETE(
     const { id, postId } = await params
 
     // Check company access
-    const companyUser = await prisma.companyUser.findUnique({
+    const companyUser = await db.companyUser.findUnique({
       where: {
         userId_id: {
           userId: user.id,
@@ -253,7 +253,7 @@ export async function DELETE(
     }
 
     // Get existing post
-    const existingPost = await prisma.socialPost.findFirst({
+    const existingPost = await db.socialPost.findFirst({
       where: {
         id: postId,
         id,
@@ -280,7 +280,7 @@ export async function DELETE(
     }
 
     // Delete post (cascades to media and account connections)
-    await prisma.socialPost.delete({
+    await db.socialPost.delete({
       where: { id: postId },
     })
 

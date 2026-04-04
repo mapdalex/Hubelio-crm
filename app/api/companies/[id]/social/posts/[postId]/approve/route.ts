@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { db } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 
 // POST /api/companies/[id]/social/posts/[postId]/approve
@@ -17,7 +17,7 @@ export async function POST(
     const { id, postId } = await params
 
     // Check company access and role
-    const companyUser = await prisma.companyUser.findUnique({
+    const companyUser = await db.companyUser.findUnique({
       where: {
         userId_id: {
           userId: user.id,
@@ -36,7 +36,7 @@ export async function POST(
     }
 
     // Get existing post
-    const existingPost = await prisma.socialPost.findFirst({
+    const existingPost = await db.socialPost.findFirst({
       where: {
         id: postId,
         id,
@@ -62,7 +62,7 @@ export async function POST(
     const newStatus = scheduledFor ? 'SCHEDULED' : 'APPROVED'
 
     // Update post
-    const post = await prisma.socialPost.update({
+    const post = await db.socialPost.update({
       where: { id: postId },
       data: {
         status: newStatus,
