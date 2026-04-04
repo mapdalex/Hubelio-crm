@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
 import {
   Select,
   SelectContent,
@@ -155,13 +156,19 @@ export default function EmailSettingsPage() {
         body: JSON.stringify(formData),
       })
 
+      const data = await res.json()
+
       if (res.ok) {
+        toast.success(editingId ? 'Konto aktualisiert' : 'Konto hinzugefuegt')
         setIsDialogOpen(false)
         resetForm()
         loadEmailSettings()
+      } else {
+        toast.error(data.error || 'Fehler beim Speichern')
       }
     } catch (error) {
-      console.error('Error saving email account:', error)
+      console.error('[v0] Error saving email account:', error)
+      toast.error('Fehler beim Speichern')
     }
   }
 

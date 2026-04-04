@@ -85,8 +85,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const companyId = params.id
-    const emailId = params.emailId
+    const { id: companyId, emailId } = await params
 
     // Verify user is admin
     const companyUser = await db.companyUser.findFirst({
