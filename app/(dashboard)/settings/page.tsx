@@ -14,7 +14,6 @@ import {
   Shield,
   Settings,
   ChevronRight,
-  Share2,
 } from 'lucide-react'
 
 const settingsSections = [
@@ -44,13 +43,6 @@ const settingsSections = [
     description: 'E-Mail-Konfiguration und Integration',
     icon: Mail,
     href: '/settings/email',
-    role: ['ADMIN'],
-  },
-  {
-    title: 'Social Media',
-    description: 'Social Media Accounts verbinden und verwalten',
-    icon: Share2,
-    href: '/settings/social',
     role: ['ADMIN'],
   },
   {

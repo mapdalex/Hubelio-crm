@@ -59,11 +59,6 @@ model User {
   
   // E-Mail Auto-Zuweisung
   emailAutoAssignments EmailSettings[]   @relation("EmailAutoAssign")
-  
-  // Social Media Posts
-  socialPosts         SocialPost[]       @relation("UserSocialPosts")
-  reviewedSocialPosts SocialPost[]       @relation("UserReviewedPosts")
-  approvedSocialPosts SocialPost[]       @relation("UserApprovedPosts")
 
   @@index([email])
   @@index([role])
@@ -548,10 +543,8 @@ model Company {
   todos         Todo[]         @relation("CompanyTodos")
   activityLogs  ActivityLog[]
   emailSettings EmailSettings[] @relation("CompanyEmailSettings")
-  calendars       Calendar[]       @relation("CompanyCalendars")
-  requests        Request[]        @relation("CompanyRequests")
-  socialAccounts  SocialAccount[]  @relation("CompanySocialAccounts")
-  socialPosts     SocialPost[]     @relation("CompanySocialPosts")
+  calendars     Calendar[]     @relation("CompanyCalendars")
+  requests      Request[]      @relation("CompanyRequests")
 
   @@index([slug])
   @@index([isActive])
@@ -696,7 +689,6 @@ enum CalendarEventType {
   TASK        // Aufgabe
   BIRTHDAY    // Geburtstag
   HOLIDAY     // Feiertag
-  SOCIAL_POST // Social Media Post
 }
 
 model Calendar {
@@ -742,11 +734,10 @@ model CalendarEvent {
   updatedAt      DateTime          @updatedAt
 
   // Relations
-  calendar    Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
-  createdBy   User     @relation("UserCreatedEvents", fields: [createdById], references: [id])
-  attendees   EventAttendee[]
-  requests    Request[]      // Verknuepfte Antraege (z.B. Urlaubsantraege)
-  socialPosts SocialPost[]   // Verknuepfte Social Media Posts
+  calendar  Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  createdBy User     @relation("UserCreatedEvents", fields: [createdById], references: [id])
+  attendees EventAttendee[]
+  requests  Request[]      // Verknuepfte Antraege (z.B. Urlaubsantraege)
 
   @@index([calendarId])
   @@index([startDate])
@@ -862,143 +853,4 @@ model Request {
   @@index([status])
   @@index([type])
   @@index([createdAt])
-}
-
-// ============================================
-// SOCIAL MEDIA
-// ============================================
-
-enum SocialPlatform {
-  INSTAGRAM
-  FACEBOOK
-  TIKTOK
-  LINKEDIN
-}
-
-enum SocialPostType {
-  POST        // Normaler Bild/Text-Post
-  REEL        // Instagram/TikTok Reel
-  STORY       // Instagram/Facebook Story
-  VIDEO       // Video-Post
-  CAROUSEL    // Mehrere Bilder/Videos
-}
-
-enum SocialPostStatus {
-  DRAFT       // Entwurf (User erstellt)
-  REVIEW      // Zur Pruefung eingereicht
-  APPROVED    // Freigegeben (Manager/Admin)
-  SCHEDULED   // Geplant fuer Veroeffentlichung
-  PUBLISHING  // Wird gerade veroeffentlicht
-  PUBLISHED   // Erfolgreich veroeffentlicht
-  FAILED      // Veroeffentlichung fehlgeschlagen
-  REJECTED    // Abgelehnt
-}
-
-// Social Media Accounts pro Firma
-model SocialAccount {
-  id            String         @id @default(cuid())
-  companyId     String         // Multi-tenant
-  platform      SocialPlatform
-  accountName   String         // z.B. @firmaname
-  accountId     String         // Platform-spezifische ID
-  accessToken   String         // Encrypted
-  refreshToken  String?        // Encrypted
-  tokenExpires  DateTime?
-  profileUrl    String?
-  profileImage  String?
-  isActive      Boolean        @default(true)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  ownerCompany  Company              @relation("CompanySocialAccounts", fields: [companyId], references: [id])
-  posts         SocialPostAccount[]
-
-  @@unique([companyId, platform, accountId])
-  @@index([companyId])
-}
-
-// Social Media Posts
-model SocialPost {
-  id              String           @id @default(cuid())
-  companyId       String           // Multi-tenant
-
-  // Inhalt
-  content         String           @db.Text // Post-Text/Caption
-  postType        SocialPostType   @default(POST)
-
-  // Status & Workflow
-  status          SocialPostStatus @default(DRAFT)
-
-  // Scheduling
-  scheduledFor    DateTime?        // Geplante Veroeffentlichung
-  publishedAt     DateTime?        // Tatsaechliche Veroeffentlichung
-
-  // Workflow-Tracking
-  createdById     String           // User der den Post erstellt hat
-  reviewedById    String?          // Wer hat reviewed
-  reviewedAt      DateTime?
-  approvedById    String?          // Wer hat freigegeben
-  approvedAt      DateTime?
-  rejectionReason String?          @db.Text // Bei Ablehnung
-
-  // Kalender-Integration
-  calendarEventId String?          // Verknuepfung zum Kalendereintrag
-
-  // Platform-spezifische Daten
-  errorMessage    String?          @db.Text // Bei Fehler
-
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-
-  // Relations
-  ownerCompany    Company          @relation("CompanySocialPosts", fields: [companyId], references: [id])
-  createdBy       User             @relation("UserSocialPosts", fields: [createdById], references: [id])
-  reviewedBy      User?            @relation("UserReviewedPosts", fields: [reviewedById], references: [id])
-  approvedBy      User?            @relation("UserApprovedPosts", fields: [approvedById], references: [id])
-  calendarEvent   CalendarEvent?   @relation(fields: [calendarEventId], references: [id])
-  media           SocialMedia[]
-  targetAccounts  SocialPostAccount[]
-
-  @@index([companyId])
-  @@index([status])
-  @@index([scheduledFor])
-  @@index([createdById])
-}
-
-// Media-Dateien fuer Posts
-model SocialMedia {
-  id          String   @id @default(cuid())
-  postId      String
-  type        String   // image, video
-  url         String   // Gespeicherte URL (z.B. Vercel Blob)
-  thumbnail   String?  // Thumbnail fuer Videos
-  altText     String?
-  duration    Int?     // Video-Dauer in Sekunden
-  width       Int?
-  height      Int?
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-
-  post        SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-
-  @@index([postId])
-}
-
-// Verknuepfung Post -> Accounts (ein Post kann auf mehrere Accounts)
-model SocialPostAccount {
-  id             String    @id @default(cuid())
-  postId         String
-  accountId      String
-  status         String    @default("pending") // pending, published, failed
-  publishedAt    DateTime?
-  platformPostId String?   // ID des Posts auf der Platform
-  platformUrl    String?   // URL zum Post auf der Platform
-  errorMessage   String?   @db.Text
-
-  post           SocialPost    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  account        SocialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
-
-  @@unique([postId, accountId])
-  @@index([postId])
-  @@index([accountId])
 }

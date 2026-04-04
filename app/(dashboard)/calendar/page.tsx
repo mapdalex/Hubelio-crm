@@ -97,19 +97,9 @@ export default function CalendarPage() {
     fetcher
   )
 
-  // Lade Social Post Events
-  const socialPostsUrl = `/api/calendar-events/social-posts?start=${format(dateRange.start, 'yyyy-MM-dd')}&end=${format(dateRange.end, 'yyyy-MM-dd')}`
-  const { data: socialPostEvents = [] } = useSWR<CalendarEvent[]>(
-    socialPostsUrl,
-    fetcher
-  )
-
   // Filtere Events nach sichtbaren Kalendern
   const visibleCalendarIds = calendars.filter(c => c.isVisible).map(c => c.id)
   const visibleEvents = events.filter(e => visibleCalendarIds.includes(e.calendarId))
-  
-  // Kombiniere normale Events mit Social Post Events
-  const allVisibleEvents = [...visibleEvents, ...socialPostEvents]
 
   // Kalender-Sichtbarkeit aendern
   const handleToggleVisibility = async (calendarId: string, isVisible: boolean) => {
@@ -279,7 +269,7 @@ export default function CalendarPage() {
 
       {/* Hauptkalender */}
       <CalendarView
-        events={allVisibleEvents}
+        events={visibleEvents}
         selectedDate={selectedDate}
         onDateSelect={setSelectedDate}
         onEventClick={handleEventClick}
