@@ -442,16 +442,16 @@ export default function EmailSettingsPage() {
                     <div className="grid gap-2">
                       <Label htmlFor="autoAssignToUserId">Auto-Zuweisung (optional)</Label>
                       <Select 
-                        value={formData.autoAssignToUserId} 
+                        value={formData.autoAssignToUserId || '_none'} 
                         onValueChange={(value) =>
-                          setFormData(prev => ({ ...prev, autoAssignToUserId: value }))
+                          setFormData(prev => ({ ...prev, autoAssignToUserId: value === '_none' ? '' : value }))
                         }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Mitarbeiter auswaehlen..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Keine automatische Zuweisung</SelectItem>
+                          <SelectItem value="_none">Keine automatische Zuweisung</SelectItem>
                           {users.map((user) => (
                             <SelectItem key={user.id} value={user.id}>
                               {user.name}
