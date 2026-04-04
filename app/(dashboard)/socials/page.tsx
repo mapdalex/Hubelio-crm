@@ -55,7 +55,6 @@ interface SocialStats {
 
 export default function SocialsDashboardPage() {
   const { data: session, status } = useSession()
-  const router = useRouter()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
