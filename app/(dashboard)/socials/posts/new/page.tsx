@@ -35,7 +35,7 @@ export default function NewPostPage() {
 
     setIsLoading(true)
     try {
-      const res = await fetch(`/api/companies/${companyId}/social/accounts`)
+      const res = await fetch(`/api/social/accounts`)
       if (res.ok) {
         const data = await res.json()
         // Filter only active accounts
@@ -60,7 +60,7 @@ export default function NewPostPage() {
 
     setIsSaving(true)
     try {
-      const res = await fetch(`/api/companies/${companyId}/social/posts`, {
+      const res = await fetch(`/api/social/posts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),

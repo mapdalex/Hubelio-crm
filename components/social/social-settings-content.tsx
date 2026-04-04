@@ -96,7 +96,7 @@ function SocialSettingsContent() {
 
     setIsLoading(true)
     try {
-      const res = await fetch(`/api/companies/${companyId}/social/accounts`)
+      const res = await fetch(`/api/social/accounts`)
       if (res.ok) {
         const data = await res.json()
         setAccounts(data.accounts || [])
@@ -134,7 +134,7 @@ function SocialSettingsContent() {
     if (!companyId) return
 
     try {
-      const res = await fetch(`/api/companies/${companyId}/social/accounts/${account.id}`, {
+      const res = await fetch(`/api/social/accounts/${account.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !account.isActive }),
@@ -157,7 +157,7 @@ function SocialSettingsContent() {
     if (!companyId || !deleteAccount) return
 
     try {
-      const res = await fetch(`/api/companies/${companyId}/social/accounts/${deleteAccount.id}`, {
+      const res = await fetch(`/api/social/accounts/${deleteAccount.id}`, {
         method: 'DELETE',
       })
 

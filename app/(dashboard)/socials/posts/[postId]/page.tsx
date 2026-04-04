@@ -96,7 +96,7 @@ export default function PostDetailPage() {
 
     setIsLoading(true)
     try {
-      const res = await fetch(`/api/companies/${companyId}/social/posts/${params.postId}`)
+      const res = await fetch(`/api/social/posts/${params.postId}`)
       if (res.ok) {
         const data = await res.json()
         setPost(data.post)
@@ -117,7 +117,7 @@ export default function PostDetailPage() {
 
     setIsProcessing(true)
     try {
-      const res = await fetch(`/api/companies/${companyId}/social/posts/${post.id}/submit`, {
+      const res = await fetch(`/api/social/posts/${post.id}/submit`, {
         method: 'POST',
       })
       
@@ -140,7 +140,7 @@ export default function PostDetailPage() {
 
     setIsProcessing(true)
     try {
-      const res = await fetch(`/api/companies/${companyId}/social/posts/${post.id}/approve`, {
+      const res = await fetch(`/api/social/posts/${post.id}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -165,7 +165,7 @@ export default function PostDetailPage() {
 
     setIsProcessing(true)
     try {
-      const res = await fetch(`/api/companies/${companyId}/social/posts/${post.id}/reject`, {
+      const res = await fetch(`/api/social/posts/${post.id}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: rejectionReason }),
@@ -192,7 +192,7 @@ export default function PostDetailPage() {
 
     setIsProcessing(true)
     try {
-      const res = await fetch(`/api/companies/${companyId}/social/posts/${post.id}/schedule`, {
+      const res = await fetch(`/api/social/posts/${post.id}/schedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scheduledFor }),
@@ -219,7 +219,7 @@ export default function PostDetailPage() {
 
     setIsProcessing(true)
     try {
-      const res = await fetch(`/api/companies/${companyId}/social/posts/${post.id}/approve`, {
+      const res = await fetch(`/api/social/posts/${post.id}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scheduledFor }),
@@ -246,7 +246,7 @@ export default function PostDetailPage() {
 
     setIsProcessing(true)
     try {
-      const res = await fetch(`/api/companies/${companyId}/social/posts/${post.id}`, {
+      const res = await fetch(`/api/social/posts/${post.id}`, {
         method: 'DELETE',
       })
       

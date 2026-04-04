@@ -68,7 +68,7 @@ export default function SocialsDashboardPage() {
   }
 
   const { data: stats, isLoading } = useSWR<SocialStats>(
-    mounted ? `/api/companies/${session.user.companyId}/social/stats` : null,
+    mounted ? `/api/social/stats` : null,
     fetcher,
     { revalidateOnFocus: false }
   )

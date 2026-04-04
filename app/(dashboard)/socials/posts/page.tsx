@@ -103,7 +103,7 @@ export default function SocialPostsPage() {
         params.set('status', statusFilter)
       }
 
-      const res = await fetch(`/api/companies/${companyId}/social/posts?${params}`)
+      const res = await fetch(`/api/social/posts?${params}`)
       if (res.ok) {
         const data = await res.json()
         setPosts(data.posts || [])
@@ -121,7 +121,7 @@ export default function SocialPostsPage() {
     if (!companyId || !confirm('Post wirklich loeschen?')) return
 
     try {
-      const res = await fetch(`/api/companies/${companyId}/social/posts/${postId}`, {
+      const res = await fetch(`/api/social/posts/${postId}`, {
         method: 'DELETE',
       })
       
@@ -141,7 +141,7 @@ export default function SocialPostsPage() {
     if (!companyId) return
 
     try {
-      const res = await fetch(`/api/companies/${companyId}/social/posts/${postId}/submit`, {
+      const res = await fetch(`/api/social/posts/${postId}/submit`, {
         method: 'POST',
       })
       
