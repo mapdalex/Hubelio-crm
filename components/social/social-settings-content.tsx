@@ -184,10 +184,10 @@ export function SocialSettingsContent() {
   }
 
   return (
-    <main className="flex-1 space-y-6 p-6">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/settings">
-          <Button variant="outline" size="icon">
+          <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
@@ -212,11 +212,11 @@ export function SocialSettingsContent() {
               const expired = account ? isTokenExpired(account) : false
 
               return (
-                <Card key={platform.id} className={account && !account.isActive ? 'opacity-60' : ''}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
+                <Card key={platform.id}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <PlatformIcon platform={platform.id} size="lg" />
+                        <PlatformIcon platform={platform.id} className="h-8 w-8" />
                         <div>
                           <CardTitle className="flex items-center gap-2">
                             {platform.name}
@@ -237,29 +237,18 @@ export function SocialSettingsContent() {
                   <CardContent>
                     {account ? (
                       <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            {account.profileImage && (
-                              <img 
-                                src={account.profileImage} 
-                                alt="" 
-                                className="h-8 w-8 rounded-full"
-                              />
+                        <div className="flex items-center gap-3">
+                          {account.profileImage && (
+                            <img src={account.profileImage} alt="" className="h-10 w-10 rounded-full" />
+                          )}
+                          <div className="flex-1">
+                            <p className="font-medium">@{account.accountName}</p>
+                            {account.profileUrl && (
+                              <a href={account.profileUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover:underline flex items-center gap-1">
+                                Profil anzeigen
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
                             )}
-                            <div>
-                              <p className="font-medium">@{account.accountName}</p>
-                              {account.profileUrl && (
-                                <a 
-                                  href={account.profileUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-muted-foreground hover:underline flex items-center gap-1"
-                                >
-                                  Profil anzeigen
-                                  <ExternalLink className="h-3 w-3" />
-                                </a>
-                              )}
-                            </div>
                           </div>
                           {canManage && (
                             <Switch
@@ -270,14 +259,14 @@ export function SocialSettingsContent() {
                         </div>
 
                         {account.tokenExpires && (
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             {expired ? (
-                              <AlertCircle className="h-3 w-3 text-destructive" />
+                              <AlertCircle className="h-4 w-4 text-destructive" />
                             ) : (
-                              <CheckCircle2 className="h-3 w-3 text-green-500" />
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
                             )}
                             <span>
-                              Token {expired ? 'abgelaufen' : 'gueltig bis'}: {' '}
+                              Token {expired ? 'abgelaufen' : 'gueltig bis'}:{' '}
                               {new Date(account.tokenExpires).toLocaleDateString('de-DE')}
                             </span>
                           </div>
@@ -301,7 +290,7 @@ export function SocialSettingsContent() {
                           )}
                           {canDelete && (
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
                               className="text-destructive hover:text-destructive"
                               onClick={() => setDeleteAccount(account)}
@@ -333,9 +322,9 @@ export function SocialSettingsContent() {
           </div>
 
           {/* Info Card */}
-          <Card className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/50">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-base">Hinweis zur Einrichtung</CardTitle>
+              <CardTitle>Hinweis zur Einrichtung</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
               <p>
@@ -343,19 +332,19 @@ export function SocialSettingsContent() {
                 in den Umgebungsvariablen konfiguriert sein:
               </p>
               <ul className="list-disc list-inside space-y-1">
-                <li><strong>Instagram/Facebook:</strong> META_APP_ID, META_APP_SECRET</li>
-                <li><strong>TikTok:</strong> TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET</li>
-                <li><strong>LinkedIn:</strong> LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET</li>
+                <li>Instagram/Facebook: META_APP_ID, META_APP_SECRET</li>
+                <li>TikTok: TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET</li>
+                <li>LinkedIn: LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET</li>
               </ul>
             </CardContent>
           </Card>
 
           {!canManage && (
-            <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/50">
+            <Card className="border-yellow-500/50 bg-yellow-500/10">
               <CardHeader>
-                <CardTitle className="text-base">Eingeschraenkte Rechte</CardTitle>
+                <CardTitle className="text-yellow-600">Eingeschraenkte Rechte</CardTitle>
               </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
+              <CardContent>
                 Sie benoetigen Manager- oder Admin-Rechte um Social Media Accounts zu verwalten.
               </CardContent>
             </Card>
@@ -381,8 +370,6 @@ export function SocialSettingsContent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </main>
+    </div>
   )
 }
-
-
