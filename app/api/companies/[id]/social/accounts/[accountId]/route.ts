@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 
-// GET /api/companies/[companyId]/social/accounts/[accountId]
+// GET /api/companies/[id]/social/accounts/[accountId]
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ companyId: string; accountId: string }> }
+  { params }: { params: Promise<{ id: string; accountId: string }> }
 ) {
   try {
     const user = await getCurrentUser()
@@ -13,14 +13,14 @@ export async function GET(
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
     }
 
-    const { companyId, accountId } = await params
+    const { id, accountId } = await params
 
     // Check company access
     const companyUser = await prisma.companyUser.findUnique({
       where: {
-        userId_companyId: {
+        userId_id: {
           userId: user.id,
-          companyId,
+          id,
         },
       },
     })
@@ -32,7 +32,7 @@ export async function GET(
     const account = await prisma.socialAccount.findFirst({
       where: { 
         id: accountId,
-        companyId,
+        id,
       },
     })
 
@@ -49,10 +49,10 @@ export async function GET(
   }
 }
 
-// PATCH /api/companies/[companyId]/social/accounts/[accountId]
+// PATCH /api/companies/[id]/social/accounts/[accountId]
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ companyId: string; accountId: string }> }
+  { params }: { params: Promise<{ id: string; accountId: string }> }
 ) {
   try {
     const user = await getCurrentUser()
@@ -60,14 +60,14 @@ export async function PATCH(
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
     }
 
-    const { companyId, accountId } = await params
+    const { id, accountId } = await params
 
     // Check company access and role
     const companyUser = await prisma.companyUser.findUnique({
       where: {
-        userId_companyId: {
+        userId_id: {
           userId: user.id,
-          companyId,
+          id,
         },
       },
     })
@@ -86,7 +86,7 @@ export async function PATCH(
     const account = await prisma.socialAccount.update({
       where: { 
         id: accountId,
-        companyId, // Ensure account belongs to this company
+        id, // Ensure account belongs to this company
       },
       data: {
         ...(typeof isActive === 'boolean' && { isActive }),
@@ -104,10 +104,10 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/companies/[companyId]/social/accounts/[accountId]
+// DELETE /api/companies/[id]/social/accounts/[accountId]
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ companyId: string; accountId: string }> }
+  { params }: { params: Promise<{ id: string; accountId: string }> }
 ) {
   try {
     const user = await getCurrentUser()
@@ -115,14 +115,14 @@ export async function DELETE(
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
     }
 
-    const { companyId, accountId } = await params
+    const { id, accountId } = await params
 
     // Check company access and role (only ADMIN and OWNER can delete)
     const companyUser = await prisma.companyUser.findUnique({
       where: {
-        userId_companyId: {
+        userId_id: {
           userId: user.id,
-          companyId,
+          id,
         },
       },
     })
@@ -139,7 +139,7 @@ export async function DELETE(
     const account = await prisma.socialAccount.findFirst({
       where: {
         id: accountId,
-        companyId,
+        id,
       },
     })
 

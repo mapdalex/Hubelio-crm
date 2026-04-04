@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 
-// POST /api/companies/[companyId]/social/posts/[postId]/submit
+// POST /api/companies/[id]/social/posts/[postId]/submit
 // Submit post for review
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ companyId: string; postId: string }> }
+  { params }: { params: Promise<{ id: string; postId: string }> }
 ) {
   try {
     const user = await getCurrentUser()
@@ -14,14 +14,14 @@ export async function POST(
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
     }
 
-    const { companyId, postId } = await params
+    const { id, postId } = await params
 
     // Check company access
     const companyUser = await prisma.companyUser.findUnique({
       where: {
-        userId_companyId: {
+        userId_id: {
           userId: user.id,
-          companyId,
+          id,
         },
       },
     })
@@ -34,7 +34,7 @@ export async function POST(
     const existingPost = await prisma.socialPost.findFirst({
       where: {
         id: postId,
-        companyId,
+        id,
       },
       include: {
         media: true,

@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 
-// POST /api/companies/[companyId]/social/posts/[postId]/schedule
-// Schedule an approved post (Manager/Admin only)
+// POST /api/companies/[id]/social/posts/[postId]/approve
+// Approve post (Manager/Admin only)
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ companyId: string; postId: string }> }
+  { params }: { params: Promise<{ id: string; postId: string }> }
 ) {
   try {
     const user = await getCurrentUser()
@@ -14,14 +14,14 @@ export async function POST(
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
     }
 
-    const { companyId, postId } = await params
+    const { id, postId } = await params
 
     // Check company access and role
     const companyUser = await prisma.companyUser.findUnique({
       where: {
-        userId_companyId: {
+        userId_id: {
           userId: user.id,
-          companyId,
+          id,
         },
       },
     })
@@ -30,16 +30,16 @@ export async function POST(
       return NextResponse.json({ error: 'Kein Zugriff auf diese Firma' }, { status: 403 })
     }
 
-    // Only Manager, Admin, Owner can schedule
+    // Only Manager, Admin, Owner can approve
     if (companyUser && !['ADMIN', 'MANAGER', 'OWNER'].includes(companyUser.role)) {
-      return NextResponse.json({ error: 'Keine Berechtigung zum Planen' }, { status: 403 })
+      return NextResponse.json({ error: 'Keine Berechtigung zur Freigabe' }, { status: 403 })
     }
 
     // Get existing post
     const existingPost = await prisma.socialPost.findFirst({
       where: {
         id: postId,
-        companyId,
+        id,
       },
     })
 
@@ -47,34 +47,30 @@ export async function POST(
       return NextResponse.json({ error: 'Post nicht gefunden' }, { status: 404 })
     }
 
-    // Only allow scheduling if post is in APPROVED or already SCHEDULED status
-    if (!['APPROVED', 'SCHEDULED'].includes(existingPost.status)) {
+    // Only allow approving if post is in REVIEW status
+    if (existingPost.status !== 'REVIEW') {
       return NextResponse.json({ 
-        error: 'Nur freigegebene Posts koennen geplant werden (Status: ' + existingPost.status + ')' 
+        error: 'Nur Posts in Pruefung koennen freigegeben werden (Status: ' + existingPost.status + ')' 
       }, { status: 400 })
     }
 
-    // Get scheduling data from request body
-    const body = await request.json()
+    // Get optional scheduling data from request body
+    const body = await request.json().catch(() => ({}))
     const { scheduledFor } = body
 
-    if (!scheduledFor) {
-      return NextResponse.json({ error: 'Zeitpunkt ist erforderlich' }, { status: 400 })
-    }
-
-    const scheduledDate = new Date(scheduledFor)
-    
-    // Validate date is in the future
-    if (scheduledDate <= new Date()) {
-      return NextResponse.json({ error: 'Zeitpunkt muss in der Zukunft liegen' }, { status: 400 })
-    }
+    // Determine new status
+    const newStatus = scheduledFor ? 'SCHEDULED' : 'APPROVED'
 
     // Update post
     const post = await prisma.socialPost.update({
       where: { id: postId },
       data: {
-        status: 'SCHEDULED',
-        scheduledFor: scheduledDate,
+        status: newStatus,
+        approvedById: user.id,
+        approvedAt: new Date(),
+        reviewedById: user.id,
+        reviewedAt: new Date(),
+        ...(scheduledFor && { scheduledFor: new Date(scheduledFor) }),
       },
       include: {
         createdBy: {
@@ -95,10 +91,10 @@ export async function POST(
 
     return NextResponse.json({ 
       post,
-      message: 'Post geplant fuer ' + scheduledDate.toLocaleString('de-DE'),
+      message: scheduledFor ? 'Post freigegeben und geplant' : 'Post freigegeben',
     })
   } catch (error) {
-    console.error('Error scheduling post:', error)
-    return NextResponse.json({ error: 'Fehler beim Planen' }, { status: 500 })
+    console.error('Error approving post:', error)
+    return NextResponse.json({ error: 'Fehler beim Freigeben' }, { status: 500 })
   }
 }

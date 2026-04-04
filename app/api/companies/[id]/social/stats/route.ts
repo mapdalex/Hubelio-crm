@@ -1,23 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import { getSession } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/auth'
 
-export async function GET(request: NextRequest, { params }: { params: { companyId: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const session = await getSession()
-    if (!session?.companyId || session.companyId !== params.companyId) {
-      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
+    const user = await getCurrentUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
     }
 
-    const companyId = params.companyId
+    const { id: companyId } = await params
+
+    // Check company access
+    const companyUser = await prisma.companyUser.findUnique({
+      where: {
+        userId_companyId: {
+          userId: user.id,
+          companyId,
+        },
+      },
+    })
+
+    if (!companyUser && user.role !== 'SUPERADMIN') {
+      return NextResponse.json({ error: 'Kein Zugriff auf diese Firma' }, { status: 403 })
+    }
 
     // Zähle verbundene Accounts
-    const connectedAccounts = await db.socialAccount.findMany({
+    const connectedAccounts = await prisma.socialAccount.findMany({
       where: { companyId, isActive: true },
     })
 
     // Zähle geplante Posts
-    const scheduledPosts = await db.socialPost.findMany({
+    const scheduledPostsCount = await prisma.socialPost.count({
       where: {
         companyId,
         status: 'SCHEDULED',
@@ -28,7 +45,7 @@ export async function GET(request: NextRequest, { params }: { params: { companyI
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
     const monthEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
 
-    const publishedThisMonth = await db.socialPost.findMany({
+    const publishedThisMonthCount = await prisma.socialPost.count({
       where: {
         companyId,
         status: 'PUBLISHED',
@@ -40,7 +57,7 @@ export async function GET(request: NextRequest, { params }: { params: { companyI
     })
 
     // Hole letzte Posts
-    const recentPosts = await db.socialPost.findMany({
+    const recentPosts = await prisma.socialPost.findMany({
       where: { companyId },
       select: {
         id: true,
@@ -54,8 +71,8 @@ export async function GET(request: NextRequest, { params }: { params: { companyI
 
     return NextResponse.json({
       connectedAccounts: connectedAccounts.length,
-      scheduledPosts: scheduledPosts.length,
-      publishedThisMonth: publishedThisMonth.length,
+      scheduledPosts: scheduledPostsCount,
+      publishedThisMonth: publishedThisMonthCount,
       totalReach: 0, // Placeholder
       totalEngagement: 0, // Placeholder
       followers: 0, // Placeholder

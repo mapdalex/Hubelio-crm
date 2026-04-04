@@ -89,14 +89,14 @@ export default function PostDetailPage() {
 
   useEffect(() => {
     loadPost()
-  }, [companyId, params.id])
+  }, [companyId, params.postId])
 
   const loadPost = async () => {
-    if (!companyId || !params.id) return
+    if (!companyId || !params.postId) return
 
     setIsLoading(true)
     try {
-      const res = await fetch(`/api/companies/${companyId}/social/posts/${params.id}`)
+      const res = await fetch(`/api/companies/${companyId}/social/posts/${params.postId}`)
       if (res.ok) {
         const data = await res.json()
         setPost(data.post)

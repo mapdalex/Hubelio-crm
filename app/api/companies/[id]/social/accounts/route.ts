@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 
-// GET /api/companies/[companyId]/social/accounts - Liste aller Social Accounts
+// GET /api/companies/[id]/social/accounts - Liste aller Social Accounts
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ companyId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser()
@@ -13,14 +13,14 @@ export async function GET(
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
     }
 
-    const { companyId } = await params
+    const { id } = await params
 
     // Check company access
     const companyUser = await prisma.companyUser.findUnique({
       where: {
-        userId_companyId: {
+        userId_id: {
           userId: user.id,
-          companyId,
+          id,
         },
       },
     })
@@ -30,7 +30,7 @@ export async function GET(
     }
 
     const accounts = await prisma.socialAccount.findMany({
-      where: { companyId },
+      where: { id },
       orderBy: { createdAt: 'desc' },
     })
 
@@ -48,10 +48,10 @@ export async function GET(
   }
 }
 
-// POST /api/companies/[companyId]/social/accounts - Neuen Account hinzufuegen (nach OAuth)
+// POST /api/companies/[id]/social/accounts - Neuen Account hinzufuegen (nach OAuth)
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ companyId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser()
@@ -59,14 +59,14 @@ export async function POST(
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
     }
 
-    const { companyId } = await params
+    const { id } = await params
 
     // Check company access and role (only ADMIN, MANAGER, OWNER can add accounts)
     const companyUser = await prisma.companyUser.findUnique({
       where: {
-        userId_companyId: {
+        userId_id: {
           userId: user.id,
-          companyId,
+          id,
         },
       },
     })
@@ -89,8 +89,8 @@ export async function POST(
     // Check if account already exists
     const existingAccount = await prisma.socialAccount.findUnique({
       where: {
-        companyId_platform_accountId: {
-          companyId,
+        id_platform_accountId: {
+          id,
           platform,
           accountId,
         },
@@ -120,7 +120,7 @@ export async function POST(
     // Create new account
     const account = await prisma.socialAccount.create({
       data: {
-        companyId,
+        id,
         platform,
         accountName,
         accountId,

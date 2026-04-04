@@ -3,10 +3,10 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { SocialPostStatus, SocialPostType } from '@prisma/client'
 
-// GET /api/companies/[companyId]/social/posts - Liste aller Social Posts
+// GET /api/companies/[id]/social/posts - Liste aller Social Posts
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ companyId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser()
@@ -14,7 +14,7 @@ export async function GET(
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
     }
 
-    const { companyId } = await params
+    const { id } = await params
     const searchParams = request.nextUrl.searchParams
     
     // Filter parameters
@@ -29,9 +29,9 @@ export async function GET(
     // Check company access
     const companyUser = await prisma.companyUser.findUnique({
       where: {
-        userId_companyId: {
+        userId_id: {
           userId: user.id,
-          companyId,
+          id,
         },
       },
     })
@@ -41,7 +41,7 @@ export async function GET(
     }
 
     // Build where clause
-    const where: Record<string, unknown> = { companyId }
+    const where: Record<string, unknown> = { id }
     
     if (status) where.status = status
     if (postType) where.postType = postType
@@ -112,10 +112,10 @@ export async function GET(
   }
 }
 
-// POST /api/companies/[companyId]/social/posts - Neuen Post erstellen
+// POST /api/companies/[id]/social/posts - Neuen Post erstellen
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ companyId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser()
@@ -123,14 +123,14 @@ export async function POST(
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
     }
 
-    const { companyId } = await params
+    const { id } = await params
 
     // Check company access
     const companyUser = await prisma.companyUser.findUnique({
       where: {
-        userId_companyId: {
+        userId_id: {
           userId: user.id,
-          companyId,
+          id,
         },
       },
     })
@@ -154,7 +154,7 @@ export async function POST(
     const accounts = await prisma.socialAccount.findMany({
       where: {
         id: { in: accountIds },
-        companyId,
+        id,
         isActive: true,
       },
     })
@@ -166,7 +166,7 @@ export async function POST(
     // Create post with media and account connections
     const post = await prisma.socialPost.create({
       data: {
-        companyId,
+        id,
         content: content.trim(),
         postType: postType || 'POST',
         status: 'DRAFT',
