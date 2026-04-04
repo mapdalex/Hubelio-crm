@@ -23,26 +23,43 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { ArrowLeft, Plus, Loader2, Trash2, Eye, EyeOff } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
+import { ArrowLeft, Plus, Loader2, Trash2, Eye, EyeOff, Mail, Ticket, Settings2, RefreshCw } from 'lucide-react'
 
 type EmailSettings = {
   id: string
   name: string
+  displayName: string | null
   protocol: string
   host: string
   port: number
   username: string
   isActive: boolean
+  accountType: 'STANDARD' | 'TICKET_SYSTEM'
+  createTicketOnReceive: boolean
+  lastSync: string | null
+}
+
+type User = {
+  id: string
+  name: string
+  email: string
 }
 
 export default function EmailSettingsPage() {
   const { companyId } = useAuth()
   const [emailAccounts, setEmailAccounts] = useState<EmailSettings[]>([])
+  const [users, setUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isTesting, setIsTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
   const [showPassword, setShowPassword] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
+    displayName: '',
     protocol: 'IMAP',
     host: '',
     port: 993,
@@ -54,10 +71,14 @@ export default function EmailSettingsPage() {
     smtpUsername: '',
     smtpPassword: '',
     smtpUseSsl: true,
+    accountType: 'STANDARD' as 'STANDARD' | 'TICKET_SYSTEM',
+    createTicketOnReceive: false,
+    autoAssignToUserId: '',
   })
 
   useEffect(() => {
     loadEmailSettings()
+    loadUsers()
   }, [companyId])
 
   const loadEmailSettings = async () => {
@@ -77,6 +98,18 @@ export default function EmailSettingsPage() {
     }
   }
 
+  const loadUsers = async () => {
+    try {
+      const res = await fetch('/api/users')
+      if (res.ok) {
+        const data = await res.json()
+        setUsers(data.users || [])
+      }
+    } catch (error) {
+      console.error('Error loading users:', error)
+    }
+  }
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target as HTMLInputElement
     setFormData(prev => ({
@@ -85,36 +118,108 @@ export default function EmailSettingsPage() {
     }))
   }
 
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      displayName: '',
+      protocol: 'IMAP',
+      host: '',
+      port: 993,
+      username: '',
+      password: '',
+      useSsl: true,
+      smtpHost: '',
+      smtpPort: 587,
+      smtpUsername: '',
+      smtpPassword: '',
+      smtpUseSsl: true,
+      accountType: 'STANDARD',
+      createTicketOnReceive: false,
+      autoAssignToUserId: '',
+    })
+    setEditingId(null)
+    setTestResult(null)
+  }
+
   const handleAddEmailAccount = async () => {
     if (!companyId) return
 
     try {
-      const res = await fetch(`/api/companies/${companyId}/email`, {
-        method: 'POST',
+      const url = editingId 
+        ? `/api/companies/${companyId}/email/${editingId}`
+        : `/api/companies/${companyId}/email`
+      
+      const res = await fetch(url, {
+        method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
 
       if (res.ok) {
         setIsDialogOpen(false)
-        setFormData({
-          name: '',
-          protocol: 'IMAP',
-          host: '',
-          port: 993,
-          username: '',
-          password: '',
-          useSsl: true,
-          smtpHost: '',
-          smtpPort: 587,
-          smtpUsername: '',
-          smtpPassword: '',
-          smtpUseSsl: true,
-        })
+        resetForm()
         loadEmailSettings()
       }
     } catch (error) {
-      console.error('Error adding email account:', error)
+      console.error('Error saving email account:', error)
+    }
+  }
+
+  const handleEditAccount = (account: EmailSettings) => {
+    setEditingId(account.id)
+    setFormData({
+      name: account.name,
+      displayName: account.displayName || '',
+      protocol: account.protocol,
+      host: account.host,
+      port: account.port,
+      username: account.username,
+      password: '', // Don't pre-fill password for security
+      useSsl: true,
+      smtpHost: '',
+      smtpPort: 587,
+      smtpUsername: '',
+      smtpPassword: '',
+      smtpUseSsl: true,
+      accountType: account.accountType,
+      createTicketOnReceive: account.createTicketOnReceive,
+      autoAssignToUserId: '',
+    })
+    setIsDialogOpen(true)
+  }
+
+  const handleTestConnection = async () => {
+    if (!companyId) return
+    
+    setIsTesting(true)
+    setTestResult(null)
+    
+    try {
+      const res = await fetch(`/api/companies/${companyId}/email/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          protocol: formData.protocol,
+          host: formData.host,
+          port: formData.port,
+          username: formData.username,
+          password: formData.password,
+          useSsl: formData.useSsl,
+        }),
+      })
+      
+      const data = await res.json()
+      setTestResult({
+        success: res.ok,
+        message: data.message || (res.ok ? 'Verbindung erfolgreich!' : 'Verbindung fehlgeschlagen'),
+      })
+    } catch (error) {
+      setTestResult({
+        success: false,
+        message: 'Verbindungstest fehlgeschlagen',
+      })
+    } finally {
+      setIsTesting(false)
     }
   }
 
@@ -178,14 +283,42 @@ export default function EmailSettingsPage() {
             <Card key={account.id}>
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle>{account.name}</CardTitle>
-                    <CardDescription>{account.username}</CardDescription>
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                      account.accountType === 'TICKET_SYSTEM' 
+                        ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400' 
+                        : 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+                    }`}>
+                      {account.accountType === 'TICKET_SYSTEM' ? (
+                        <Ticket className="h-5 w-5" />
+                      ) : (
+                        <Mail className="h-5 w-5" />
+                      )}
+                    </div>
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        {account.displayName || account.name}
+                      </CardTitle>
+                      <CardDescription>{account.username}</CardDescription>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Badge variant={account.accountType === 'TICKET_SYSTEM' ? 'default' : 'outline'}>
+                      {account.accountType === 'TICKET_SYSTEM' ? 'Ticket-System' : 'Standard'}
+                    </Badge>
+                    {account.createTicketOnReceive && (
+                      <Badge variant="secondary">Auto-Ticket</Badge>
+                    )}
                     <Badge variant={account.isActive ? 'default' : 'secondary'}>
                       {account.isActive ? 'Aktiv' : 'Inaktiv'}
                     </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditAccount(account)}
+                    >
+                      <Settings2 className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -198,7 +331,7 @@ export default function EmailSettingsPage() {
                 </div>
               </CardHeader>
               <CardContent className="grid gap-2 text-sm">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <p className="text-muted-foreground">Protokoll</p>
                     <p className="font-medium">{account.protocol}</p>
@@ -212,8 +345,12 @@ export default function EmailSettingsPage() {
                     <p className="font-medium">{account.port}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Benutzername</p>
-                    <p className="font-medium">{account.username}</p>
+                    <p className="text-muted-foreground">Letzte Synchronisation</p>
+                    <p className="font-medium">
+                      {account.lastSync 
+                        ? new Date(account.lastSync).toLocaleString('de-DE') 
+                        : 'Nie'}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -222,25 +359,129 @@ export default function EmailSettingsPage() {
         </div>
       )}
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open)
+          if (!open) resetForm()
+        }}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl">
           <DialogHeader>
-            <DialogTitle>E-Mail-Konto hinzufügen</DialogTitle>
+            <DialogTitle>
+              {editingId ? 'E-Mail-Konto bearbeiten' : 'E-Mail-Konto hinzufuegen'}
+            </DialogTitle>
             <DialogDescription>
-              Konfigurieren Sie ein neues E-Mail-Konto für die Synchronisierung
+              Konfigurieren Sie ein E-Mail-Konto fuer die Synchronisierung
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">Kontoname</Label>
-              <Input
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                placeholder="z.B. Support"
-              />
+            {/* Kontotyp Auswahl */}
+            <div className="grid gap-4 p-4 border rounded-lg bg-muted/30">
+              <Label className="text-base font-semibold">Kontotyp</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, accountType: 'STANDARD', createTicketOnReceive: false }))}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-colors ${
+                    formData.accountType === 'STANDARD'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-muted hover:border-muted-foreground/50'
+                  }`}
+                >
+                  <Mail className={`h-8 w-8 ${formData.accountType === 'STANDARD' ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <span className="font-medium">Normales Postfach</span>
+                  <span className="text-xs text-muted-foreground text-center">
+                    Standard E-Mail-Konto ohne Ticket-Integration
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, accountType: 'TICKET_SYSTEM' }))}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-colors ${
+                    formData.accountType === 'TICKET_SYSTEM'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-muted hover:border-muted-foreground/50'
+                  }`}
+                >
+                  <Ticket className={`h-8 w-8 ${formData.accountType === 'TICKET_SYSTEM' ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <span className="font-medium">Ticket-System</span>
+                  <span className="text-xs text-muted-foreground text-center">
+                    Eingehende Mails koennen Tickets erstellen
+                  </span>
+                </button>
+              </div>
+              
+              {/* Ticket-System Optionen */}
+              {formData.accountType === 'TICKET_SYSTEM' && (
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="createTicketOnReceive" className="font-medium">
+                        Automatisch Tickets erstellen
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Neue E-Mails werden automatisch als Tickets angelegt
+                      </p>
+                    </div>
+                    <Switch
+                      id="createTicketOnReceive"
+                      checked={formData.createTicketOnReceive}
+                      onCheckedChange={(checked) => 
+                        setFormData(prev => ({ ...prev, createTicketOnReceive: checked }))
+                      }
+                    />
+                  </div>
+                  
+                  {formData.createTicketOnReceive && (
+                    <div className="grid gap-2">
+                      <Label htmlFor="autoAssignToUserId">Auto-Zuweisung (optional)</Label>
+                      <Select 
+                        value={formData.autoAssignToUserId} 
+                        onValueChange={(value) =>
+                          setFormData(prev => ({ ...prev, autoAssignToUserId: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Mitarbeiter auswaehlen..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Keine automatische Zuweisung</SelectItem>
+                          {users.map((user) => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Neue Tickets werden automatisch diesem Mitarbeiter zugewiesen
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Interner Name</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  placeholder="z.B. Support"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="displayName">Anzeigename (Sidebar)</Label>
+                <Input
+                  id="displayName"
+                  name="displayName"
+                  value={formData.displayName}
+                  onChange={handleInputChange}
+                  placeholder="z.B. Support Postfach"
+                />
+              </div>
             </div>
 
             <div className="grid gap-4 border-t pt-4">
@@ -372,13 +613,44 @@ export default function EmailSettingsPage() {
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Abbrechen
+          {/* Verbindungstest Ergebnis */}
+          {testResult && (
+            <div className={`p-3 rounded-lg text-sm ${
+              testResult.success 
+                ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
+                : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+            }`}>
+              {testResult.message}
+            </div>
+          )}
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleTestConnection}
+              disabled={isTesting || !formData.host || !formData.username}
+              className="w-full sm:w-auto"
+            >
+              {isTesting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Teste...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Verbindung testen
+                </>
+              )}
             </Button>
-            <Button onClick={handleAddEmailAccount}>
-              Konto hinzufügen
-            </Button>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="flex-1 sm:flex-initial">
+                Abbrechen
+              </Button>
+              <Button onClick={handleAddEmailAccount} className="flex-1 sm:flex-initial">
+                {editingId ? 'Speichern' : 'Konto hinzufuegen'}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
