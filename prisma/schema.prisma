@@ -938,8 +938,8 @@ model Project {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  worklogs    Worklog[]
-  company     Company? @relation("CompanyProjects", fields: [companyId], references: [id])
+  worklogs    Worklog[] @relation("ProjectWorklogs")
+  company     Company?  @relation("CompanyProjects", fields: [companyId], references: [id])
 
   @@index([companyId])
   @@index([isActive])
@@ -956,8 +956,8 @@ model Activity {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  worklogs    Worklog[]
-  company     Company? @relation("CompanyActivities", fields: [companyId], references: [id])
+  worklogs    Worklog[] @relation("ActivityWorklogs")
+  company     Company?  @relation("CompanyActivities", fields: [companyId], references: [id])
 
   @@index([companyId])
   @@index([isActive])
