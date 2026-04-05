@@ -81,9 +81,11 @@ export function WorklogClient() {
 
       const res = await fetch(`/api/worklogs?${params}`)
       const data = await res.json()
-      setWorklogs(data)
+      // Sicherstellen dass es ein Array ist
+      setWorklogs(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Error loading worklogs:', error)
+      setWorklogs([])
     } finally {
       setIsLoading(false)
     }
@@ -103,9 +105,11 @@ export function WorklogClient() {
     try {
       const res = await fetch('/api/projects')
       const data = await res.json()
-      setProjects(data)
+      // Sicherstellen dass es ein Array ist
+      setProjects(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Error loading projects:', error)
+      setProjects([])
     }
   }, [])
 
@@ -201,12 +205,12 @@ export function WorklogClient() {
               </div>
               <div className="flex-1">
                 <Label className="text-xs text-muted-foreground">Kunde</Label>
-                <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
+                <Select value={selectedCustomer || "all"} onValueChange={(v) => setSelectedCustomer(v === "all" ? "" : v)}>
                   <SelectTrigger className="w-40">
                     <SelectValue placeholder="Alle" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Alle Kunden</SelectItem>
+                    <SelectItem value="all">Alle Kunden</SelectItem>
                     {customers.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
                         {c.companyName || `${c.firstName} ${c.lastName}`}
@@ -217,12 +221,12 @@ export function WorklogClient() {
               </div>
               <div className="flex-1">
                 <Label className="text-xs text-muted-foreground">Projekt</Label>
-                <Select value={selectedProject} onValueChange={setSelectedProject}>
+                <Select value={selectedProject || "all"} onValueChange={(v) => setSelectedProject(v === "all" ? "" : v)}>
                   <SelectTrigger className="w-40">
                     <SelectValue placeholder="Alle" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Alle Projekte</SelectItem>
+                    <SelectItem value="all">Alle Projekte</SelectItem>
                     {projects.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.name}
