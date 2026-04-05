@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       include: { companyUser: { include: { company: true } } },
     })
 
-    if (!user?.companyUser[0]) {
+    if (!user?.companyUser?.[0]) {
       return NextResponse.json({ error: 'No company' }, { status: 400 })
     }
 
@@ -23,10 +23,10 @@ export async function GET(req: NextRequest) {
     const companyRole = user.companyUser[0].role
 
     const { searchParams } = new URL(req.url)
-    const userId = searchParams.get('userId')
-    const type = searchParams.get('type')
+    const userId = searchParams.get('userId') || undefined
+    const type = searchParams.get('type') || undefined
 
-    let where: any = { companyId: userCompanyId }
+    let where: Record<string, any> = { companyId: userCompanyId }
 
     if (!['ADMIN', 'MANAGER', 'OWNER'].includes(companyRole)) {
       where.userId = session.user.id
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { type } = body
+    const { type } = body as { type: string }
 
     if (!['WORK', 'HOME_OFFICE', 'DOCTOR_VISIT'].includes(type)) {
       return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
@@ -70,11 +70,10 @@ export async function POST(req: NextRequest) {
       include: { companyUser: { include: { company: true } } },
     })
 
-    if (!user?.companyUser[0]) {
+    if (!user?.companyUser?.[0]) {
       return NextResponse.json({ error: 'No company' }, { status: 400 })
     }
 
-    // Check if already has active work time
     const activeWorkTime = await prisma.workTime.findFirst({
       where: {
         userId: session.user.id,
@@ -93,7 +92,7 @@ export async function POST(req: NextRequest) {
       data: {
         userId: session.user.id,
         companyId: user.companyUser[0].company.id,
-        type,
+        type: type as any,
         startTime: new Date(),
       },
       include: { user: { select: { name: true, email: true } } },
