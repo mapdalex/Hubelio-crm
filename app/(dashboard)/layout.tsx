@@ -3,7 +3,6 @@ import { AppSidebar } from '@/components/app-sidebar'
 import { AuthProvider } from '@/lib/auth-context'
 import { Separator } from '@/components/ui/separator'
 import { GlobalSearch } from '@/components/global-search'
-import { WorkTimeTracker } from '@/components/work-time-tracker'
 import { ThemeProvider } from '@/components/theme-provider'
 
 export default function DashboardLayout({
@@ -23,7 +22,6 @@ export default function DashboardLayout({
                 <Separator orientation="vertical" className="h-6" />
                 <GlobalSearch />
               </div>
-              <WorkTimeTracker />
             </header>
             <main className="flex-1 p-6">
               {children}
