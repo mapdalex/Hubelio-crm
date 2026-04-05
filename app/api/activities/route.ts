@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/auth';
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import { getSession } from '@/lib/auth'
 
 /**
  * GET /api/activities
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const activities = await prisma.activity.findMany({
+    const activities = await db.activity.findMany({
       where: {
         companyId: session.user.companyId,
         isActive: true,
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const activity = await prisma.activity.create({
+    const activity = await db.activity.create({
       data: {
         name,
         description,

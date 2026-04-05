@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/auth';
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import { getSession } from '@/lib/auth'
 
 export async function GET(
   request: NextRequest,
@@ -12,7 +12,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const worklog = await prisma.worklog.findUnique({
+    const worklog = await db.worklog.findUnique({
       where: { id: params.id },
       include: {
         user: true,
@@ -55,7 +55,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const worklog = await prisma.worklog.findUnique({
+    const worklog = await db.worklog.findUnique({
       where: { id: params.id },
     });
 
@@ -83,7 +83,7 @@ export async function PATCH(
       description,
     } = body;
 
-    const updated = await prisma.worklog.update({
+    const updated = await db.worklog.update({
       where: { id: params.id },
       data: {
         ...(customerId && { customerId }),
@@ -122,7 +122,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const worklog = await prisma.worklog.findUnique({
+    const worklog = await db.worklog.findUnique({
       where: { id: params.id },
     });
 
@@ -139,7 +139,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await prisma.worklog.delete({
+    await db.worklog.delete({
       where: { id: params.id },
     });
 

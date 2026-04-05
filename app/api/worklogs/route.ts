@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/auth';
-import { hasPermission } from '@/lib/permissions';
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import { getSession } from '@/lib/auth'
+import { hasPermission } from '@/lib/permissions'
 
 /**
  * GET /api/worklogs
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       filter.userId = session.user.id;
     }
 
-    const worklogs = await prisma.worklog.findMany({
+    const worklogs = await db.worklog.findMany({
       where: filter,
       include: {
         user: { select: { id: true, name: true } },
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const worklog = await prisma.worklog.create({
+    const worklog = await db.worklog.create({
       data: {
         userId: session.user.id,
         customerId,

@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/auth';
-import { PDFDocument, rgb, degrees } from 'pdf-lib';
-import fontkit from '@pdf-lib/fontkit';
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import { getSession } from '@/lib/auth'
+import { PDFDocument, rgb, degrees } from 'pdf-lib'
+import fontkit from '@pdf-lib/fontkit'
 
 /**
  * GET /api/worklogs/export/pdf
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(`${year}-${monthStr}-01`);
     const endDate = new Date(parseInt(year), parseInt(monthStr), 0, 23, 59, 59, 999);
 
-    const worklogs = await prisma.worklog.findMany({
+    const worklogs = await db.worklog.findMany({
       where: {
         customerId,
         startTime: {
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       orderBy: { startTime: 'asc' },
     });
 
-    const customer = await prisma.customer.findUnique({
+    const customer = await db.customer.findUnique({
       where: { id: customerId },
     });
 

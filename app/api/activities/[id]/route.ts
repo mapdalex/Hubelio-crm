@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/auth';
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db'
+import { getSession } from '@/lib/auth'
 
 export async function PATCH(
   request: NextRequest,
@@ -19,7 +19,7 @@ export async function PATCH(
     const body = await request.json();
     const { name, description, hourlyRate, isActive } = body;
 
-    const activity = await prisma.activity.update({
+    const activity = await db.activity.update({
       where: { id: params.id },
       data: {
         ...(name && { name }),
@@ -53,7 +53,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await prisma.activity.delete({
+    await db.activity.delete({
       where: { id: params.id },
     });
 
