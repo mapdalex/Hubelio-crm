@@ -1,90 +1,72 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getSession } from '@/lib/auth'
+import { getSession, canViewInCompany, canEditInCompany } from '@/lib/auth'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+type RouteParams = { params: Promise<{ id: string }> }
+
+export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const session = await getSession()
+    if (!canViewInCompany(session)) {
+      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
+
+    const { id } = await params
 
     const worklog = await db.worklog.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
-        user: true,
-        customer: true,
-        project: true,
-        activity: true,
+        user: { select: { id: true, name: true } },
+        customer: { select: { id: true, companyName: true, firstName: true, lastName: true } },
+        project: { select: { id: true, name: true, color: true } },
+        activity: { select: { id: true, name: true } },
       },
-    });
+    })
 
     if (!worklog) {
-      return NextResponse.json({ error: 'Worklog not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 })
     }
 
-    // Check permissions - user can only see own logs or admin can see all
-    if (
-      session.user.id !== worklog.userId &&
-      session.user.role !== 'ADMIN' &&
-      session.user.role !== 'SUPERADMIN'
-    ) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // Zugriffspruefung - nur eigene Logs oder Admin
+    if (session!.role !== 'SUPERADMIN' && session!.role !== 'ADMIN') {
+      if (worklog.userId !== session!.userId) {
+        return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 403 })
+      }
     }
 
-    return NextResponse.json(worklog);
-  } catch (error: any) {
-    console.error('Error fetching worklog:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal Server Error' },
-      { status: 500 }
-    );
+    return NextResponse.json(worklog)
+  } catch (error) {
+    console.error('Error fetching worklog:', error)
+    return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 })
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const session = await getSession()
+    if (!canEditInCompany(session)) {
+      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
 
-    const worklog = await db.worklog.findUnique({
-      where: { id: params.id },
-    });
+    const { id } = await params
 
+    const worklog = await db.worklog.findUnique({ where: { id } })
     if (!worklog) {
-      return NextResponse.json({ error: 'Worklog not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 })
     }
 
-    // Only creator or admin can update
-    if (
-      session.user.id !== worklog.userId &&
-      session.user.role !== 'ADMIN' &&
-      session.user.role !== 'SUPERADMIN'
-    ) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // Zugriffspruefung
+    if (session!.role !== 'SUPERADMIN' && session!.role !== 'ADMIN') {
+      if (worklog.userId !== session!.userId) {
+        return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 403 })
+      }
     }
 
-    const body = await request.json();
-    const {
-      customerId,
-      projectId,
-      activityId,
-      startTime,
-      endTime,
-      duration,
-      description,
-    } = body;
+    const body = await request.json()
+    const { customerId, projectId, activityId, startTime, endTime, duration, description } = body
 
     const updated = await db.worklog.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(customerId && { customerId }),
         ...(projectId && { projectId }),
@@ -100,55 +82,41 @@ export async function PATCH(
         project: { select: { id: true, name: true } },
         activity: { select: { id: true, name: true } },
       },
-    });
+    })
 
-    return NextResponse.json(updated);
-  } catch (error: any) {
-    console.error('Error updating worklog:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal Server Error' },
-      { status: 500 }
-    );
+    return NextResponse.json(updated)
+  } catch (error) {
+    console.error('Error updating worklog:', error)
+    return NextResponse.json({ error: 'Fehler beim Aktualisieren' }, { status: 500 })
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const session = await getSession()
+    if (!canEditInCompany(session)) {
+      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
 
-    const worklog = await db.worklog.findUnique({
-      where: { id: params.id },
-    });
+    const { id } = await params
 
+    const worklog = await db.worklog.findUnique({ where: { id } })
     if (!worklog) {
-      return NextResponse.json({ error: 'Worklog not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 })
     }
 
-    // Only creator or admin can delete
-    if (
-      session.user.id !== worklog.userId &&
-      session.user.role !== 'ADMIN' &&
-      session.user.role !== 'SUPERADMIN'
-    ) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // Zugriffspruefung
+    if (session!.role !== 'SUPERADMIN' && session!.role !== 'ADMIN') {
+      if (worklog.userId !== session!.userId) {
+        return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 403 })
+      }
     }
 
-    await db.worklog.delete({
-      where: { id: params.id },
-    });
+    await db.worklog.delete({ where: { id } })
 
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('Error deleting worklog:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal Server Error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting worklog:', error)
+    return NextResponse.json({ error: 'Fehler beim Loeschen' }, { status: 500 })
   }
 }

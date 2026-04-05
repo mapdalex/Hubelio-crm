@@ -1,60 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getSession } from '@/lib/auth'
+import { getSession, canViewInCompany, canEditInCompany } from '@/lib/auth'
 
-/**
- * GET /api/projects
- * Alle Projekte für die aktuelle Firma abrufen
- */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const session = await getSession()
+    if (!canViewInCompany(session)) {
+      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
 
     const projects = await db.project.findMany({
       where: {
-        companyId: session.user.companyId,
+        companyId: session!.companyId,
         isActive: true,
       },
       orderBy: { name: 'asc' },
-    });
+    })
 
-    return NextResponse.json(projects);
-  } catch (error: any) {
-    console.error('Error fetching projects:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal Server Error' },
-      { status: 500 }
-    );
+    return NextResponse.json(projects)
+  } catch (error) {
+    console.error('Error fetching projects:', error)
+    return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 })
   }
 }
 
-/**
- * POST /api/projects
- * Neues Projekt erstellen (Admin only)
- */
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const session = await getSession()
+    if (!canEditInCompany(session)) {
+      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
 
     // Admin only
-    if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (session!.role !== 'ADMIN' && session!.role !== 'SUPERADMIN') {
+      return NextResponse.json({ error: 'Nur Admins koennen Projekte erstellen' }, { status: 403 })
     }
 
-    const body = await request.json();
-    const { name, description, color } = body;
+    const body = await request.json()
+    const { name, description, color } = body
 
     if (!name) {
-      return NextResponse.json(
-        { error: 'Project name is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Projektname erforderlich' }, { status: 400 })
     }
 
     const project = await db.project.create({
@@ -62,16 +48,13 @@ export async function POST(request: NextRequest) {
         name,
         description,
         color: color || '#3b82f6',
-        companyId: session.user.companyId,
+        companyId: session!.companyId,
       },
-    });
+    })
 
-    return NextResponse.json(project, { status: 201 });
-  } catch (error: any) {
-    console.error('Error creating project:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal Server Error' },
-      { status: 500 }
-    );
+    return NextResponse.json(project, { status: 201 })
+  } catch (error) {
+    console.error('Error creating project:', error)
+    return NextResponse.json({ error: 'Fehler beim Erstellen' }, { status: 500 })
   }
 }

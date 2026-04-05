@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getSession } from '@/lib/auth'
-import { hasPermission } from '@/lib/permissions'
+import { getSession, canViewInCompany, canEditInCompany } from '@/lib/auth'
 
 /**
  * GET /api/worklogs
@@ -9,40 +8,40 @@ import { hasPermission } from '@/lib/permissions'
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const session = await getSession()
+    if (!canViewInCompany(session)) {
+      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
 
-    const { searchParams } = new URL(request.url);
-    const customerId = searchParams.get('customerId');
-    const projectId = searchParams.get('projectId');
-    const month = searchParams.get('month'); // YYYY-MM
-    const year = searchParams.get('year');
-    const userId = searchParams.get('userId');
+    const { searchParams } = new URL(request.url)
+    const customerId = searchParams.get('customerId')
+    const projectId = searchParams.get('projectId')
+    const month = searchParams.get('month') // YYYY-MM format
+    const userId = searchParams.get('userId')
 
-    // Build filter
-    let filter: any = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const filter: any = {}
 
-    if (customerId) filter.customerId = customerId;
-    if (projectId) filter.projectId = projectId;
-    if (userId) filter.userId = userId;
-
-    // Month/Year filtering
-    if (month && year) {
-      const startDate = new Date(`${year}-${month}-01`);
-      const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0, 23, 59, 59, 999);
-      filter.startTime = { gte: startDate, lte: endDate };
-    } else if (year) {
-      const startDate = new Date(`${year}-01-01`);
-      const endDate = new Date(parseInt(year), 11, 31, 23, 59, 59, 999);
-      filter.startTime = { gte: startDate, lte: endDate };
+    // Multi-tenant filter
+    if (session!.role !== 'SUPERADMIN' && session!.companyId) {
+      filter.companyId = session!.companyId
     }
 
-    // Rollenbasierter Zugriff
-    if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN') {
-      // Normale Mitarbeiter sehen nur ihre eigenen Logs
-      filter.userId = session.user.id;
+    if (customerId) filter.customerId = customerId
+    if (projectId) filter.projectId = projectId
+    if (userId) filter.userId = userId
+
+    // Month filtering (YYYY-MM format)
+    if (month) {
+      const [year, monthNum] = month.split('-').map(Number)
+      const startDate = new Date(year, monthNum - 1, 1)
+      const endDate = new Date(year, monthNum, 0, 23, 59, 59, 999)
+      filter.startTime = { gte: startDate, lte: endDate }
+    }
+
+    // Rollenbasierter Zugriff: Normale Mitarbeiter sehen nur ihre eigenen Logs
+    if (session!.role !== 'ADMIN' && session!.role !== 'SUPERADMIN') {
+      filter.userId = session!.userId
     }
 
     const worklogs = await db.worklog.findMany({
@@ -54,15 +53,12 @@ export async function GET(request: NextRequest) {
         activity: { select: { id: true, name: true } },
       },
       orderBy: { startTime: 'desc' },
-    });
+    })
 
-    return NextResponse.json(worklogs);
-  } catch (error: any) {
-    console.error('Error fetching worklogs:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal Server Error' },
-      { status: 500 }
-    );
+    return NextResponse.json(worklogs)
+  } catch (error) {
+    console.error('Error fetching worklogs:', error)
+    return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 })
   }
 }
 
@@ -72,12 +68,12 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const session = await getSession()
+    if (!canEditInCompany(session)) {
+      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
 
-    const body = await request.json();
+    const body = await request.json()
     const {
       customerId,
       projectId,
@@ -86,19 +82,19 @@ export async function POST(request: NextRequest) {
       endTime,
       duration,
       description,
-    } = body;
+    } = body
 
     // Validation
     if (!customerId || !projectId || !activityId || !startTime || !endTime) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Bitte alle Pflichtfelder ausfuellen' },
         { status: 400 }
-      );
+      )
     }
 
     const worklog = await db.worklog.create({
       data: {
-        userId: session.user.id,
+        userId: session!.userId,
         customerId,
         projectId,
         activityId,
@@ -106,7 +102,7 @@ export async function POST(request: NextRequest) {
         endTime: new Date(endTime),
         duration: duration || Math.round((new Date(endTime).getTime() - new Date(startTime).getTime()) / 60000),
         description,
-        companyId: session.user.companyId,
+        companyId: session!.companyId,
       },
       include: {
         user: { select: { id: true, name: true } },
@@ -114,14 +110,11 @@ export async function POST(request: NextRequest) {
         project: { select: { id: true, name: true } },
         activity: { select: { id: true, name: true } },
       },
-    });
+    })
 
-    return NextResponse.json(worklog, { status: 201 });
-  } catch (error: any) {
-    console.error('Error creating worklog:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal Server Error' },
-      { status: 500 }
-    );
+    return NextResponse.json(worklog, { status: 201 })
+  } catch (error) {
+    console.error('Error creating worklog:', error)
+    return NextResponse.json({ error: 'Fehler beim Erstellen' }, { status: 500 })
   }
 }

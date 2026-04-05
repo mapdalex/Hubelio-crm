@@ -1,60 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getSession } from '@/lib/auth'
+import { getSession, canViewInCompany, canEditInCompany } from '@/lib/auth'
 
-/**
- * GET /api/activities
- * Alle Aktivitäten für die aktuelle Firma abrufen
- */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const session = await getSession()
+    if (!canViewInCompany(session)) {
+      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
 
     const activities = await db.activity.findMany({
       where: {
-        companyId: session.user.companyId,
+        companyId: session!.companyId,
         isActive: true,
       },
       orderBy: { name: 'asc' },
-    });
+    })
 
-    return NextResponse.json(activities);
-  } catch (error: any) {
-    console.error('Error fetching activities:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal Server Error' },
-      { status: 500 }
-    );
+    return NextResponse.json(activities)
+  } catch (error) {
+    console.error('Error fetching activities:', error)
+    return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 })
   }
 }
 
-/**
- * POST /api/activities
- * Neue Aktivität erstellen (Admin only)
- */
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const session = await getSession()
+    if (!canEditInCompany(session)) {
+      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
 
     // Admin only
-    if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (session!.role !== 'ADMIN' && session!.role !== 'SUPERADMIN') {
+      return NextResponse.json({ error: 'Nur Admins koennen Taetigkeiten erstellen' }, { status: 403 })
     }
 
-    const body = await request.json();
-    const { name, description, hourlyRate } = body;
+    const body = await request.json()
+    const { name, description, hourlyRate } = body
 
     if (!name) {
-      return NextResponse.json(
-        { error: 'Activity name is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Name erforderlich' }, { status: 400 })
     }
 
     const activity = await db.activity.create({
@@ -62,16 +48,13 @@ export async function POST(request: NextRequest) {
         name,
         description,
         hourlyRate: hourlyRate || 0,
-        companyId: session.user.companyId,
+        companyId: session!.companyId,
       },
-    });
+    })
 
-    return NextResponse.json(activity, { status: 201 });
-  } catch (error: any) {
-    console.error('Error creating activity:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal Server Error' },
-      { status: 500 }
-    );
+    return NextResponse.json(activity, { status: 201 })
+  } catch (error) {
+    console.error('Error creating activity:', error)
+    return NextResponse.json({ error: 'Fehler beim Erstellen' }, { status: 500 })
   }
 }
