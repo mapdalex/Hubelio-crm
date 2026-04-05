@@ -1,5 +1,9 @@
 import path from 'node:path'
 import { defineConfig } from 'prisma/config'
+import { config } from 'dotenv'
+
+// Lade .env Datei manuell, da Prisma config das automatische Laden ueberspringt
+config()
 
 export default defineConfig({
   earlyAccess: true,
