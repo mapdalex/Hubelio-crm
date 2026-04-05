@@ -59,6 +59,9 @@ model User {
   
   // E-Mail Auto-Zuweisung
   emailAutoAssignments EmailSettings[]   @relation("EmailAutoAssign")
+  
+  // Arbeitszeit
+  workTimes            WorkTime[]        @relation("UserWorkTimes")
 
   @@index([email])
   @@index([role])
@@ -545,6 +548,7 @@ model Company {
   emailSettings EmailSettings[] @relation("CompanyEmailSettings")
   calendars     Calendar[]     @relation("CompanyCalendars")
   requests      Request[]      @relation("CompanyRequests")
+  workTimes     WorkTime[]     @relation("CompanyWorkTimes")
 
   @@index([slug])
   @@index([isActive])
@@ -853,4 +857,36 @@ model Request {
   @@index([status])
   @@index([type])
   @@index([createdAt])
+}
+
+// ============================================
+// ARBEITSZEIT (WORKTIME)
+// ============================================
+
+enum WorkTimeType {
+  WORK          // Normale Arbeitszeit
+  HOME_OFFICE   // Homeoffice
+  DOCTOR_VISIT  // Arztbesuch
+}
+
+model WorkTime {
+  id          String       @id @default(cuid())
+  companyId   String?      // Multi-tenant
+  userId      String       // Mitarbeiter
+  type        WorkTimeType
+  startTime   DateTime
+  endTime     DateTime?    // Null wenn noch laeuft
+  duration    Int?         // Berechnete Dauer in Minuten
+  notes       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  ownerCompany Company? @relation("CompanyWorkTimes", fields: [companyId], references: [id])
+  user         User     @relation("UserWorkTimes", fields: [userId], references: [id])
+
+  @@index([companyId])
+  @@index([userId])
+  @@index([startTime])
+  @@index([type])
 }
