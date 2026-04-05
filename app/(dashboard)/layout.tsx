@@ -4,6 +4,7 @@ import { AuthProvider } from '@/lib/auth-context'
 import { Separator } from '@/components/ui/separator'
 import { GlobalSearch } from '@/components/global-search'
 import { WorkTimeTracker } from '@/components/work-time-tracker'
+import { WorklogQuickEntry } from '@/components/worklog-quick-entry'
 import { ThemeProvider } from '@/components/theme-provider'
 
 export default function DashboardLayout({
@@ -22,6 +23,7 @@ export default function DashboardLayout({
                 <SidebarTrigger />
                 <Separator orientation="vertical" className="h-6" />
                 <GlobalSearch />
+                <WorklogQuickEntry />
               </div>
               <WorkTimeTracker />
             </header>
