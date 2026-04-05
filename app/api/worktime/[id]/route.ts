@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth'
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -12,8 +12,10 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
+
     const workTime = await prisma.workTime.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: {
           select: {
@@ -36,8 +38,9 @@ export async function GET(
     })
 
     const userCompanyId = user?.companyUser?.[0]?.companyId
+    const companyRole = user?.companyUser?.[0]?.role
     const isOwner = workTime.userId === session.user.id
-    const isAdminOrManager = ['ADMIN', 'MANAGER', 'OWNER'].includes(user?.role || '')
+    const isAdminOrManager = ['ADMIN', 'MANAGER', 'OWNER'].includes(companyRole || '')
     const isSameCompany = workTime.companyId === userCompanyId
 
     if (!isOwner && (!isAdminOrManager || !isSameCompany)) {
@@ -53,7 +56,7 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -61,8 +64,10 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
+
     const workTime = await prisma.workTime.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!workTime) {
@@ -85,7 +90,7 @@ export async function PATCH(
     }
 
     const updated = await prisma.workTime.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         endTime: body.endTime ? new Date(body.endTime) : workTime.endTime,
         duration,
@@ -111,7 +116,7 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -119,8 +124,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
+
     const workTime = await prisma.workTime.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!workTime) {
@@ -130,17 +137,19 @@ export async function DELETE(
     // Check permissions - owner or admin
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
+      include: { companyUser: true },
     })
 
+    const companyRole = user?.companyUser?.[0]?.role
     const isOwner = workTime.userId === session.user.id
-    const isAdmin = user?.role === 'ADMIN' || user?.role === 'OWNER'
+    const isAdmin = ['ADMIN', 'OWNER'].includes(companyRole || '')
 
     if (!isOwner && !isAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     await prisma.workTime.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json({ success: true })

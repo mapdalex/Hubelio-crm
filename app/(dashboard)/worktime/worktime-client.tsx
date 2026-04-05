@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Clock, Search, User, Filter, Download, Trash2 } from 'lucide-react'
+import { Clock, Search, User, Download, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { format, formatDuration, intervalToDuration } from 'date-fns'
+import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { useAuth } from '@/lib/auth-context'
 

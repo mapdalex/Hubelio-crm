@@ -11,7 +11,6 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const userId = searchParams.get('userId')
-    const companyId = searchParams.get('companyId')
     const type = searchParams.get('type')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
@@ -27,13 +26,13 @@ export async function GET(req: NextRequest) {
     }
 
     const userCompanyId = user.companyUser[0].company.id
-    const userRole = user.role
+    const companyRole = user.companyUser[0].role // CompanyRole: MEMBER, MANAGER, ADMIN, OWNER
 
     // Build where clause based on permissions
     let where: any = { companyId: userCompanyId }
 
     // If not admin, manager, or owner - only show own records
-    if (!['ADMIN', 'MANAGER', 'OWNER'].includes(userRole)) {
+    if (!['ADMIN', 'MANAGER', 'OWNER'].includes(companyRole)) {
       where.userId = session.user.id
     } else if (userId) {
       // Admin/Manager can filter by specific user
