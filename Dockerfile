@@ -55,11 +55,9 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Prisma CLI fuer db push kopieren (separat, da nicht in standalone enthalten)
-# Kopiere den gesamten .pnpm Ordner und die Prisma-bezogenen Module
-COPY --from=builder /app/node_modules/.pnpm ./node_modules/.pnpm
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/.bin ./node_modules/.bin
+# Komplette node_modules fuer Prisma CLI kopieren
+# pnpm hat eine spezielle Struktur, daher kopieren wir alles
+COPY --from=builder /app/node_modules ./node_modules
 
 # Uploads Verzeichnis erstellen
 RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads
@@ -74,15 +72,21 @@ echo "CRM System startet..."
 echo "============================================"
 echo ""
 
-echo "[1/4] Warte auf Datenbank (10 Sekunden)..."
+echo "[1/5] Warte auf Datenbank (10 Sekunden)..."
 sleep 10
 
 echo ""
-echo "[2/4] Pruefe Datenbankverbindung..."
-echo "DATABASE_URL: \${DATABASE_URL:0:30}..."
+echo "[2/5] Pruefe Datenbankverbindung..."
+echo "DATABASE_URL vorhanden: $([ -n "\$DATABASE_URL" ] && echo 'JA' || echo 'NEIN')"
 
 echo ""
-echo "[3/4] Fuehre Prisma db push aus..."
+echo "[3/5] Regeneriere Prisma Client..."
+npx prisma generate 2>&1 || {
+  echo "WARNUNG: Prisma generate fehlgeschlagen, fahre trotzdem fort..."
+}
+
+echo ""
+echo "[4/5] Fuehre Prisma db push aus..."
 npx prisma db push --accept-data-loss 2>&1 || {
   echo ""
   echo "WARNUNG: Prisma db push fehlgeschlagen, versuche es erneut in 5 Sekunden..."
@@ -96,7 +100,7 @@ npx prisma db push --accept-data-loss 2>&1 || {
 }
 
 echo ""
-echo "[4/4] Schema erfolgreich! Starte Server..."
+echo "[5/5] Schema erfolgreich! Starte Server..."
 echo ""
 echo "============================================"
 echo "CRM System bereit auf Port 3000"
