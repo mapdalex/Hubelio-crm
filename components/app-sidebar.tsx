@@ -25,6 +25,7 @@ import {
   Shield,
   CalendarDays,
   FileCheck,
+  Clock,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -85,6 +86,7 @@ const getModuleNavItems = (accessibleModules: ModuleId[]): NavItem[] => {
         { title: 'Kontakte', url: '/customers/contacts', icon: User, module: 'CORE' },
         { title: 'Kalender', url: '/calendar', icon: CalendarDays, module: 'CORE' },
         { title: 'Antraege', url: '/requests', icon: FileCheck, module: 'CORE' },
+        { title: 'Arbeitszeit', url: '/worktime', icon: Clock, module: 'CORE' },
         { title: 'Todos', url: '/todos', icon: CheckSquare, module: 'CORE' },
       ],
     },
