@@ -1,5 +1,4 @@
-# Docker Compose für CRM System
-# Verwendung mit Coolify oder selbst-gehostet
+version: '3.8'
 
 services:
   # PostgreSQL Datenbank
@@ -11,14 +10,12 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-crm_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_in_production}
       POSTGRES_DB: ${POSTGRES_DB:-crm_database}
-      # Wichtig fuer Portainer/Coolify - erlaubt Verbindungen von allen Hosts
       POSTGRES_HOST_AUTH_METHOD: scram-sha-256
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      # Einfacherer healthcheck der zuverlaessiger funktioniert
       test: ["CMD", "pg_isready", "-U", "crm_user", "-d", "crm_database"]
       interval: 10s
       timeout: 5s
@@ -35,13 +32,11 @@ services:
     container_name: crm-app
     restart: unless-stopped
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-crm_user}:${POSTGRES_PASSWORD:-change_me_in_production}@db:5432/${POSTGRES_DB:-crm_database}
       AUTH_SECRET: ${AUTH_SECRET:-your-secret-key-change-in-production-min-32-chars}
       NODE_ENV: production
-      # Setze auf 'false' wenn du kein HTTPS verwendest (localhost/Docker ohne SSL)
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
     ports:
       - "3000:3000"

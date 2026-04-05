@@ -3,6 +3,7 @@ import { AppSidebar } from '@/components/app-sidebar'
 import { AuthProvider } from '@/lib/auth-context'
 import { Separator } from '@/components/ui/separator'
 import { GlobalSearch } from '@/components/global-search'
+import { WorkTimeTracker } from '@/components/work-time-tracker'
 import { ThemeProvider } from '@/components/theme-provider'
 
 export default function DashboardLayout({
@@ -16,10 +17,13 @@ export default function DashboardLayout({
         <SidebarProvider>
           <AppSidebar />
           <SidebarInset>
-            <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4">
-              <SidebarTrigger />
-              <Separator orientation="vertical" className="h-6" />
-              <GlobalSearch />
+            <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-4 border-b bg-background px-4">
+              <div className="flex items-center gap-4">
+                <SidebarTrigger />
+                <Separator orientation="vertical" className="h-6" />
+                <GlobalSearch />
+              </div>
+              <WorkTimeTracker />
             </header>
             <main className="flex-1 p-6">
               {children}
