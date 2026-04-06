@@ -14,9 +14,6 @@
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed"
   },
-  "prisma": {
-    "seed": "ts-node prisma/seed.ts"
-  },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
     "@pdf-lib/fontkit": "^1.1.1",
