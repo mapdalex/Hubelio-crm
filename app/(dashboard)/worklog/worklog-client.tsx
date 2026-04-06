@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Search, Calendar, Clock, Filter, ArrowUpDown, Download, Trash2, Edit2 } from 'lucide-react'
+import { Plus, Search, Calendar, Clock, Filter, ArrowUpDown, Download, Trash2, Edit2, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -328,14 +328,15 @@ export function WorklogClient() {
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
                                 <span className="sr-only">Menu</span>
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(log.id)}>
-                              <Edit2 className="mr-2 h-4 w-4" />
-                              Bearbeiten
-                            </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEdit(log.id)}>
+                                <Edit2 className="mr-2 h-4 w-4" />
+                                Bearbeiten
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => handleDelete(log.id)}
                                 className="text-destructive"
