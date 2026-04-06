@@ -40,7 +40,8 @@ model User {
   tickets        Ticket[]        @relation("TicketCreator")
   assignedTickets Ticket[]       @relation("TicketAssignee")
   ticketComments TicketComment[]
-  todos          Todo[]
+  assignedTodos  Todo[]          @relation("AssignedTodos")
+  createdTodos   Todo[]          @relation("CreatedTodos")
   files          File[]
   customer       Customer?       @relation("CustomerUser")
   activityLogs   ActivityLog[]
@@ -429,7 +430,8 @@ model EmailAttachment {
 model Todo {
   id          String    @id @default(cuid())
   companyId   String?   // Multi-tenant
-  userId      String
+  userId      String    // Wem das Todo zugewiesen ist
+  createdById String    // Wer das Todo erstellt hat
   title       String
   description String?
   dueDate     DateTime?
@@ -440,10 +442,12 @@ model Todo {
   updatedAt   DateTime  @updatedAt
 
   ownerCompany Company? @relation("CompanyTodos", fields: [companyId], references: [id])
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation("AssignedTodos", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy    User     @relation("CreatedTodos", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([companyId])
   @@index([userId])
+  @@index([createdById])
   @@index([dueDate])
   @@index([isCompleted])
 }
