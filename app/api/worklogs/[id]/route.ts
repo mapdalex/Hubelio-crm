@@ -27,11 +27,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 })
     }
 
-    // Zugriffspruefung - nur eigene Logs oder Admin
-    if (session!.role !== 'SUPERADMIN' && session!.role !== 'ADMIN') {
-      if (worklog.userId !== session!.userId) {
-        return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 403 })
-      }
+    // Zugriffspruefung - Admin und Manager sehen alle, User nur eigene
+    const canViewAll = ['SUPERADMIN', 'ADMIN', 'MANAGER'].includes(session!.role)
+    if (!canViewAll && worklog.userId !== session!.userId) {
+      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 403 })
     }
 
     return NextResponse.json(worklog)
@@ -55,11 +54,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 })
     }
 
-    // Zugriffspruefung
-    if (session!.role !== 'SUPERADMIN' && session!.role !== 'ADMIN') {
-      if (worklog.userId !== session!.userId) {
-        return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 403 })
-      }
+    // Zugriffspruefung - Admin und Manager duerfen alle bearbeiten
+    const canEditAll = ['SUPERADMIN', 'ADMIN', 'MANAGER'].includes(session!.role)
+    if (!canEditAll && worklog.userId !== session!.userId) {
+      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 403 })
     }
 
     const body = await request.json()
@@ -105,11 +103,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 })
     }
 
-    // Zugriffspruefung
-    if (session!.role !== 'SUPERADMIN' && session!.role !== 'ADMIN') {
-      if (worklog.userId !== session!.userId) {
-        return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 403 })
-      }
+    // Zugriffspruefung - Admin und Manager duerfen alle loeschen
+    const canDeleteAll = ['SUPERADMIN', 'ADMIN', 'MANAGER'].includes(session!.role)
+    if (!canDeleteAll && worklog.userId !== session!.userId) {
+      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 403 })
     }
 
     await db.worklog.delete({ where: { id } })

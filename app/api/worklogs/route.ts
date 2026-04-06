@@ -39,8 +39,9 @@ export async function GET(request: NextRequest) {
       filter.startTime = { gte: startDate, lte: endDate }
     }
 
-    // Rollenbasierter Zugriff: Normale Mitarbeiter sehen nur ihre eigenen Logs
-    if (session!.role !== 'ADMIN' && session!.role !== 'SUPERADMIN') {
+    // Rollenbasierter Zugriff: Admin und Manager sehen alle, User nur eigene
+    const canViewAll = ['SUPERADMIN', 'ADMIN', 'MANAGER'].includes(session!.role)
+    if (!canViewAll) {
       filter.userId = session!.userId
     }
 
