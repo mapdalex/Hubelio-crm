@@ -32,6 +32,16 @@ function generateTimeSlots() {
   return slots
 }
 
+// Round current time to nearest 15-minute slot
+function roundToNearest15(date: Date): string {
+  const minutes = date.getMinutes()
+  const rounded = Math.round(minutes / 15) * 15
+  const adjustedDate = new Date(date)
+  adjustedDate.setMinutes(rounded === 60 ? 0 : rounded)
+  if (rounded === 60) adjustedDate.setHours(adjustedDate.getHours() + 1)
+  return `${String(adjustedDate.getHours()).padStart(2, '0')}:${String(adjustedDate.getMinutes()).padStart(2, '0')}`
+}
+
 export function WorklogQuickEntry() {
   const [isOpen, setIsOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -42,7 +52,8 @@ export function WorklogQuickEntry() {
     customerId: '',
     projectId: '',
     activityId: '',
-    duration: '1', // in hours
+    startTime: '',
+    endTime: '',
   })
 
   const timeSlots = generateTimeSlots()
@@ -50,6 +61,17 @@ export function WorklogQuickEntry() {
   useEffect(() => {
     if (isOpen) {
       loadData()
+      // Aktuelle Zeit auf naechsten 15-Min-Slot runden und als Endzeit setzen
+      const now = new Date()
+      const currentRounded = roundToNearest15(now)
+      // Startzeit = 1 Stunde davor
+      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
+      const startRounded = roundToNearest15(oneHourAgo)
+      setFormData(prev => ({
+        ...prev,
+        startTime: startRounded,
+        endTime: currentRounded,
+      }))
     }
   }, [isOpen])
 
@@ -88,9 +110,20 @@ export function WorklogQuickEntry() {
 
     setIsSubmitting(true)
     try {
-      const now = new Date()
-      const startTime = new Date(now)
-      const endTime = new Date(now.getTime() + parseInt(formData.duration) * 60 * 60 * 1000)
+      const today = new Date().toISOString().split('T')[0]
+      const [startHours, startMinutes] = formData.startTime.split(':').map(Number)
+      const [endHours, endMinutes] = formData.endTime.split(':').map(Number)
+
+      const startDate = new Date(today)
+      startDate.setHours(startHours, startMinutes, 0, 0)
+
+      const endDate = new Date(today)
+      endDate.setHours(endHours, endMinutes, 0, 0)
+
+      // Falls Endzeit vor Startzeit, naechster Tag
+      if (endDate <= startDate) {
+        endDate.setDate(endDate.getDate() + 1)
+      }
 
       const res = await fetch('/api/worklogs', {
         method: 'POST',
@@ -99,8 +132,8 @@ export function WorklogQuickEntry() {
           customerId: formData.customerId,
           projectId: formData.projectId,
           activityId: formData.activityId,
-          startTime: startTime.toISOString(),
-          endTime: endTime.toISOString(),
+          startTime: startDate.toISOString(),
+          endTime: endDate.toISOString(),
           description: 'Schnellerfassung',
         }),
       })
@@ -111,7 +144,8 @@ export function WorklogQuickEntry() {
           customerId: '',
           projectId: '',
           activityId: '',
-          duration: '1',
+          startTime: '',
+          endTime: '',
         })
       } else {
         const error = await res.json()
@@ -189,20 +223,33 @@ export function WorklogQuickEntry() {
             </Select>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="quick-duration">Dauer (Stunden) *</Label>
-            <Select value={formData.duration} onValueChange={(value) => setFormData({ ...formData, duration: value })}>
-              <SelectTrigger id="quick-duration">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {[0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 7, 8].map((hours) => (
-                  <SelectItem key={hours} value={hours.toString()}>
-                    {hours === 0.25 ? '15 Min' : hours === 0.5 ? '30 Min' : hours === 0.75 ? '45 Min' : `${hours}h`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-2">
+              <Label htmlFor="quick-start">Von *</Label>
+              <Select value={formData.startTime} onValueChange={(value) => setFormData({ ...formData, startTime: value })}>
+                <SelectTrigger id="quick-start">
+                  <SelectValue placeholder="Startzeit" />
+                </SelectTrigger>
+                <SelectContent className="max-h-48">
+                  {timeSlots.map((slot) => (
+                    <SelectItem key={slot} value={slot}>{slot}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="quick-end">Bis *</Label>
+              <Select value={formData.endTime} onValueChange={(value) => setFormData({ ...formData, endTime: value })}>
+                <SelectTrigger id="quick-end">
+                  <SelectValue placeholder="Endzeit" />
+                </SelectTrigger>
+                <SelectContent className="max-h-48">
+                  {timeSlots.map((slot) => (
+                    <SelectItem key={slot} value={slot}>{slot}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <Button type="submit" disabled={isSubmitting} className="w-full">
