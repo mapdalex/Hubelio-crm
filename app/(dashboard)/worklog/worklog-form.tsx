@@ -18,6 +18,7 @@ import { DialogFooter } from '@/components/ui/dialog'
 type WorklogFormProps = {
   customers: any[]
   projects: any[]
+  initialData?: any
   onSuccess: () => void
 }
 
@@ -32,17 +33,17 @@ function generateTimeSlots() {
   return slots
 }
 
-export function WorklogForm({ customers, projects, onSuccess }: WorklogFormProps) {
+export function WorklogForm({ customers, projects, initialData, onSuccess }: WorklogFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activities, setActivities] = useState<any[]>([])
   const [formData, setFormData] = useState({
-    customerId: '',
-    projectId: '',
-    activityId: '',
-    date: new Date().toISOString().split('T')[0],
-    startTime: '09:00',
-    endTime: '10:00',
-    description: '',
+    customerId: initialData?.customerId || '',
+    projectId: initialData?.projectId || '',
+    activityId: initialData?.activityId || '',
+    date: initialData ? new Date(initialData.startTime).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    startTime: initialData ? new Date(initialData.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '09:00',
+    endTime: initialData ? new Date(initialData.endTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '10:00',
+    description: initialData?.description || '',
   })
 
   const timeSlots = generateTimeSlots()
@@ -85,8 +86,11 @@ export function WorklogForm({ customers, projects, onSuccess }: WorklogFormProps
         endDate.setDate(endDate.getDate() + 1)
       }
 
-      const res = await fetch('/api/worklogs', {
-        method: 'POST',
+      const url = initialData ? `/api/worklogs/${initialData.id}` : '/api/worklogs'
+      const method = initialData ? 'PATCH' : 'POST'
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerId: formData.customerId,
@@ -105,8 +109,8 @@ export function WorklogForm({ customers, projects, onSuccess }: WorklogFormProps
         alert(`Fehler: ${error.error}`)
       }
     } catch (error) {
-      console.error('Error creating worklog:', error)
-      alert('Fehler beim Erstellen des Worklogs')
+      console.error('Error saving worklog:', error)
+      alert('Fehler beim Speichern des Worklogs')
     } finally {
       setIsSubmitting(false)
     }

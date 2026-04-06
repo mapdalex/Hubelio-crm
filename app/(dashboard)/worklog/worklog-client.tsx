@@ -69,6 +69,7 @@ export function WorklogClient() {
   const [projects, setProjects] = useState<any[]>([])
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingWorklog, setEditingWorklog] = useState<Worklog | null>(null)
 
   const loadWorklogs = useCallback(async () => {
     setIsLoading(true)
@@ -137,6 +138,16 @@ export function WorklogClient() {
     }
   }
 
+  const handleEdit = async (id: string) => {
+    try {
+      const res = await fetch(`/api/worklogs/${id}`)
+      const data = await res.json()
+      setEditingWorklog(data)
+    } catch (error) {
+      console.error('Error loading worklog:', error)
+    }
+  }
+
   const handleExportPDF = async () => {
     if (!selectedCustomer) {
       alert('Bitte wählen Sie einen Kunden aus')
@@ -188,6 +199,28 @@ export function WorklogClient() {
             />
           </DialogContent>
         </Dialog>
+
+        {editingWorklog && (
+          <Dialog open={!!editingWorklog} onOpenChange={(open) => !open && setEditingWorklog(null)}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Worklog bearbeiten</DialogTitle>
+                <DialogDescription>
+                  Aktualisieren Sie Ihre Arbeitsstunde
+                </DialogDescription>
+              </DialogHeader>
+              <WorklogForm
+                customers={customers}
+                projects={projects}
+                initialData={editingWorklog}
+                onSuccess={() => {
+                  setEditingWorklog(null)
+                  loadWorklogs()
+                }}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <Card>
@@ -299,10 +332,10 @@ export function WorklogClient() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setEditingId(log.id)}>
-                                <Edit2 className="mr-2 h-4 w-4" />
-                                Bearbeiten
-                              </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEdit(log.id)}>
+                              <Edit2 className="mr-2 h-4 w-4" />
+                              Bearbeiten
+                            </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => handleDelete(log.id)}
                                 className="text-destructive"
