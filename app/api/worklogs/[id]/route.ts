@@ -18,6 +18,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       include: {
         user: { select: { id: true, name: true } },
         customer: { select: { id: true, companyName: true, firstName: true, lastName: true } },
+        contact: { select: { id: true, firstName: true, lastName: true } },
         project: { select: { id: true, name: true, color: true } },
         activity: { select: { id: true, name: true } },
       },
@@ -61,12 +62,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     const body = await request.json()
-    const { customerId, projectId, activityId, startTime, endTime, duration, description } = body
+    const { customerId, contactId, projectId, activityId, startTime, endTime, duration, description } = body
 
     const updated = await db.worklog.update({
       where: { id },
       data: {
         ...(customerId && { customerId }),
+        // contactId kann null sein (um Kontakt zu entfernen)
+        ...('contactId' in body && { contactId: contactId || null }),
         ...(projectId && { projectId }),
         ...(activityId && { activityId }),
         ...(startTime && { startTime: new Date(startTime) }),
@@ -77,6 +80,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       include: {
         user: { select: { id: true, name: true } },
         customer: { select: { id: true, companyName: true } },
+        contact: { select: { id: true, firstName: true, lastName: true } },
         project: { select: { id: true, name: true } },
         activity: { select: { id: true, name: true } },
       },

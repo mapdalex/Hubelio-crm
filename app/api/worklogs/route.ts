@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
       include: {
         user: { select: { id: true, name: true } },
         customer: { select: { id: true, companyName: true, firstName: true, lastName: true } },
+        contact: { select: { id: true, firstName: true, lastName: true } },
         project: { select: { id: true, name: true, color: true } },
         activity: { select: { id: true, name: true } },
       },
@@ -77,6 +78,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const {
       customerId,
+      contactId,
       projectId,
       activityId,
       startTime,
@@ -97,6 +99,7 @@ export async function POST(request: NextRequest) {
       data: {
         userId: session!.userId,
         customerId,
+        contactId: contactId || null,
         projectId,
         activityId,
         startTime: new Date(startTime),
@@ -108,6 +111,7 @@ export async function POST(request: NextRequest) {
       include: {
         user: { select: { id: true, name: true } },
         customer: { select: { id: true, companyName: true } },
+        contact: { select: { id: true, firstName: true, lastName: true } },
         project: { select: { id: true, name: true } },
         activity: { select: { id: true, name: true } },
       },

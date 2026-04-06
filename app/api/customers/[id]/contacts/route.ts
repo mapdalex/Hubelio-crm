@@ -1,6 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { getSession, canEditInCompany } from '@/lib/auth'
+import { getSession, canViewInCompany, canEditInCompany } from '@/lib/auth'
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getSession()
+    if (!canViewInCompany(session)) {
+      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
+    }
+
+    const { id } = await params
+
+    const contacts = await db.contact.findMany({
+      where: { customerId: id },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        position: true,
+        email: true,
+        phone: true,
+        isPrimary: true,
+      },
+      orderBy: [{ isPrimary: 'desc' }, { lastName: 'asc' }],
+    })
+
+    return NextResponse.json(contacts)
+  } catch (error) {
+    console.error('Error fetching contacts:', error)
+    return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 })
+  }
+}
 
 export async function POST(
   request: NextRequest,

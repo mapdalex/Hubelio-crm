@@ -36,8 +36,10 @@ function generateTimeSlots() {
 export function WorklogForm({ customers, projects, initialData, onSuccess }: WorklogFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activities, setActivities] = useState<any[]>([])
+  const [contacts, setContacts] = useState<any[]>([])
   const [formData, setFormData] = useState({
     customerId: initialData?.customerId || '',
+    contactId: initialData?.contactId || '',
     projectId: initialData?.projectId || '',
     activityId: initialData?.activityId || '',
     date: initialData ? new Date(initialData.startTime).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
@@ -52,13 +54,34 @@ export function WorklogForm({ customers, projects, initialData, onSuccess }: Wor
     loadActivities()
   }, [])
 
+  // Kontakte laden wenn Kunde gewechselt wird
+  useEffect(() => {
+    if (formData.customerId) {
+      loadContacts(formData.customerId)
+    } else {
+      setContacts([])
+      setFormData(prev => ({ ...prev, contactId: '' }))
+    }
+  }, [formData.customerId])
+
   const loadActivities = async () => {
     try {
       const res = await fetch('/api/activities')
       const data = await res.json()
-      setActivities(data)
+      setActivities(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Error loading activities:', error)
+    }
+  }
+
+  const loadContacts = async (customerId: string) => {
+    try {
+      const res = await fetch(`/api/customers/${customerId}/contacts`)
+      const data = await res.json()
+      setContacts(Array.isArray(data) ? data : [])
+    } catch (error) {
+      console.error('Error loading contacts:', error)
+      setContacts([])
     }
   }
 
@@ -94,6 +117,7 @@ export function WorklogForm({ customers, projects, initialData, onSuccess }: Wor
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerId: formData.customerId,
+          contactId: formData.contactId || null,
           projectId: formData.projectId,
           activityId: formData.activityId,
           startTime: startDate.toISOString(),
@@ -134,6 +158,28 @@ export function WorklogForm({ customers, projects, initialData, onSuccess }: Wor
             </SelectContent>
           </Select>
         </div>
+
+        {contacts.length > 0 && (
+          <div className="grid gap-2">
+            <Label htmlFor="contactId">Ansprechpartner <span className="text-muted-foreground">(optional)</span></Label>
+            <Select
+              value={formData.contactId || 'none'}
+              onValueChange={(value) => setFormData({ ...formData, contactId: value === 'none' ? '' : value })}
+            >
+              <SelectTrigger id="contactId">
+                <SelectValue placeholder="Kein Ansprechpartner" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Kein Ansprechpartner</SelectItem>
+                {contacts.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.firstName} {c.lastName}{c.position ? ` – ${c.position}` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="grid gap-2">
           <Label htmlFor="projectId">Projekt *</Label>

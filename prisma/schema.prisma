@@ -141,7 +141,8 @@ model Contact {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  worklogs Worklog[] @relation("ContactWorklogs")
 
   @@index([customerId])
 }
@@ -901,6 +902,7 @@ model Worklog {
   companyId     String?  // Multi-tenant
   userId        String   // Wer hat die Zeit erfasst
   customerId    String   // Kunde (fakturierbar an)
+  contactId     String?  // Optionaler Ansprechpartner beim Kunden
   projectId     String   // Projekt
   activityId    String   // Aktivitaet/Taetigkeitsart
   
@@ -916,6 +918,7 @@ model Worklog {
   // Relations
   user          User     @relation("UserWorklogs", fields: [userId], references: [id])
   customer      Customer @relation("CustomerWorklogs", fields: [customerId], references: [id])
+  contact       Contact? @relation("ContactWorklogs", fields: [contactId], references: [id])
   project       Project  @relation("ProjectWorklogs", fields: [projectId], references: [id])
   activity      Activity @relation("ActivityWorklogs", fields: [activityId], references: [id])
   company       Company? @relation("CompanyWorklogs", fields: [companyId], references: [id])
