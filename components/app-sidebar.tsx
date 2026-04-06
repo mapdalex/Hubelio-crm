@@ -26,6 +26,7 @@ import {
   CalendarDays,
   FileCheck,
   Clock,
+  FileText,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -87,6 +88,7 @@ const getModuleNavItems = (accessibleModules: ModuleId[]): NavItem[] => {
         { title: 'Kalender', url: '/calendar', icon: CalendarDays, module: 'CORE' },
         { title: 'Antraege', url: '/requests', icon: FileCheck, module: 'CORE' },
         { title: 'Arbeitszeit', url: '/worktime', icon: Clock, module: 'CORE' },
+        { title: 'Worklog', url: '/worklog', icon: FileText, module: 'CORE' },
         { title: 'Todos', url: '/todos', icon: CheckSquare, module: 'CORE' },
       ],
     },
@@ -186,6 +188,7 @@ const adminNavItems: NavItem[] = [
       { title: 'Module', url: '/settings/modules', icon: Lock },
       { title: 'Benutzer', url: '/settings/users', icon: Users },
       { title: 'E-Mail', url: '/settings/email', icon: Mail },
+      { title: 'Worklog', url: '/settings/worklog', icon: FileText },
       { title: 'System', url: '/settings/system', icon: Settings },
     ],
   },

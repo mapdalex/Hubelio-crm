@@ -60,6 +60,7 @@ model User {
   // E-Mail Auto-Zuweisung
   emailAutoAssignments EmailSettings[]   @relation("EmailAutoAssign")
   workTimes            WorkTime[]        @relation("UserWorkTimes")
+  worklogs             Worklog[]         @relation("UserWorklogs")
 
   @@index([email])
   @@index([role])
@@ -117,6 +118,7 @@ model Customer {
   services        Service[]
   tickets         Ticket[]
   files           File[]
+  worklogs        Worklog[]          @relation("CustomerWorklogs")
 
   @@index([companyId])
   @@index([customerNumber])
@@ -139,7 +141,8 @@ model Contact {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  worklogs Worklog[] @relation("ContactWorklogs")
 
   @@index([customerId])
 }
@@ -547,6 +550,9 @@ model Company {
   calendars     Calendar[]     @relation("CompanyCalendars")
   requests      Request[]      @relation("CompanyRequests")
   workTimes     WorkTime[]     @relation("CompanyWorkTimes")
+  worklogs      Worklog[]      @relation("CompanyWorklogs")
+  projects      Project[]      @relation("CompanyProjects")
+  activities    Activity[]     @relation("CompanyActivities")
 
   @@index([slug])
   @@index([isActive])
@@ -885,4 +891,77 @@ model WorkTime {
   @@index([companyId])
   @@index([userId])
   @@index([startTime])
+}
+
+// ============================================
+// WORKLOG (STUNDENERFASSUNG ZUR ABRECHNUNG)
+// ============================================
+
+model Worklog {
+  id            String   @id @default(cuid())
+  companyId     String?  // Multi-tenant
+  userId        String   // Wer hat die Zeit erfasst
+  customerId    String   // Kunde (fakturierbar an)
+  contactId     String?  // Optionaler Ansprechpartner beim Kunden
+  projectId     String   // Projekt
+  activityId    String   // Aktivitaet/Taetigkeitsart
+  
+  // Zeiten - in 15-Minuten-Takt
+  startTime     DateTime
+  endTime       DateTime
+  duration      Int      // Dauer in Minuten
+  
+  description   String?  // Beschreibung der Arbeit
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user          User     @relation("UserWorklogs", fields: [userId], references: [id])
+  customer      Customer @relation("CustomerWorklogs", fields: [customerId], references: [id])
+  contact       Contact? @relation("ContactWorklogs", fields: [contactId], references: [id])
+  project       Project  @relation("ProjectWorklogs", fields: [projectId], references: [id])
+  activity      Activity @relation("ActivityWorklogs", fields: [activityId], references: [id])
+  company       Company? @relation("CompanyWorklogs", fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@index([userId])
+  @@index([customerId])
+  @@index([projectId])
+  @@index([startTime])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  companyId   String?  // Multi-tenant
+  name        String
+  description String?
+  color       String   @default("#3b82f6")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  worklogs    Worklog[] @relation("ProjectWorklogs")
+  company     Company?  @relation("CompanyProjects", fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@index([isActive])
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  companyId   String?  // Multi-tenant
+  name        String   // z.B. "Entwicklung", "Testing", "Dokumentation"
+  description String?
+  hourlyRate  Float    @default(0) // Optional: Stundensatz fuer Abrechnung
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  worklogs    Worklog[] @relation("ActivityWorklogs")
+  company     Company?  @relation("CompanyActivities", fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@index([isActive])
 }
