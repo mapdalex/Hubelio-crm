@@ -135,7 +135,33 @@ export async function POST(request: NextRequest) {
     }
 
     // Einzelnes Todo erstellen
-    const targetUserId = assignedUserId || session!.userId
+    let targetUserId = session!.userId
+
+    // Falls ein anderer User zugewiesen wird, prüfen ob dieser zur gleichen Firma gehört
+    if (assignedUserId && assignedUserId !== session!.userId) {
+      if (!session!.companyId) {
+        return NextResponse.json(
+          { error: 'Keine Firma zugeordnet' },
+          { status: 400 }
+        )
+      }
+
+      const targetUserInCompany = await db.companyUser.findFirst({
+        where: {
+          userId: assignedUserId,
+          companyId: session!.companyId,
+        },
+      })
+
+      if (!targetUserInCompany) {
+        return NextResponse.json(
+          { error: 'Benutzer nicht in dieser Firma gefunden' },
+          { status: 403 }
+        )
+      }
+
+      targetUserId = assignedUserId
+    }
 
     const todo = await db.todo.create({
       data: {

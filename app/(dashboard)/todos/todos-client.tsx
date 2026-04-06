@@ -119,9 +119,10 @@ export function TodosClient() {
 
   const loadUsers = useCallback(async () => {
     try {
-      const res = await fetch('/api/users')
+      // Lädt nur User innerhalb der eigenen Firma
+      const res = await fetch('/api/todos/users')
       const data = await res.json()
-      setUsers(Array.isArray(data) ? data : data.users || [])
+      setUsers(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Error loading users:', error)
     }
