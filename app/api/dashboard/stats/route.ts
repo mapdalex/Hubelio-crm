@@ -183,6 +183,36 @@ export async function GET() {
       }
     }
 
+    // RENT Module Stats
+    if (accessibleModules.includes('RENT' as ModuleId)) {
+      const whereRent = companyId ? { companyId } : {}
+      const now2 = new Date()
+
+      const [totalItems, activeBookings, pendingBookings] = await Promise.all([
+        db.rentalItem.count({ where: { isActive: true, ...whereRent } }),
+        db.rentalBooking.count({
+          where: {
+            startDate: { lte: now2 },
+            endDate: { gte: now2 },
+            status: { in: ['CONFIRMED', 'ACTIVE'] },
+            ...whereRent,
+          },
+        }),
+        db.rentalBooking.count({
+          where: { status: 'PENDING', ...whereRent },
+        }),
+      ])
+
+      const availableItems = totalItems - activeBookings
+
+      stats.RENT = {
+        totalItems,
+        availableItems: Math.max(0, availableItems),
+        rentedItems: activeBookings,
+        pendingBookings,
+      }
+    }
+
     // ANALYTICS Module Stats (placeholder - aggregate from other modules)
     if (accessibleModules.includes('ANALYTICS' as ModuleId)) {
       stats.ANALYTICS = {

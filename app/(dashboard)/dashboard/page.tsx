@@ -23,6 +23,7 @@ import {
   Shield,
   CheckCircle,
   ArrowRight,
+  Key,
 } from 'lucide-react'
 import Link from 'next/link'
 import { format, addDays, startOfMonth, endOfMonth } from 'date-fns'
@@ -205,6 +206,31 @@ async function DashboardStats() {
     moduleStats.CAMPAIGNS = { activeCampaigns: 0, emailsSent: 0 }
   }
   
+  // RENT Module Stats
+  if (accessibleModules.includes('RENT' as ModuleId)) {
+    const whereRent = companyId ? { companyId } : {}
+    const [totalItems, activeBookings, pendingBookings] = await Promise.all([
+      db.rentalItem.count({ where: { isActive: true, ...whereRent } }),
+      db.rentalBooking.count({
+        where: {
+          startDate: { lte: now },
+          endDate: { gte: now },
+          status: { in: ['CONFIRMED', 'ACTIVE'] },
+          ...whereRent,
+        },
+      }),
+      db.rentalBooking.count({
+        where: { status: 'PENDING', ...whereRent },
+      }),
+    ])
+    moduleStats.RENT = {
+      totalItems,
+      availableItems: Math.max(0, totalItems - activeBookings),
+      rentedItems: activeBookings,
+      pendingBookings,
+    }
+  }
+
   // ANALYTICS - aggregate stats
   if (accessibleModules.includes('ANALYTICS' as ModuleId)) {
     moduleStats.ANALYTICS = {
@@ -409,6 +435,40 @@ async function DashboardStats() {
           </ModuleCard>
         )}
         
+        {/* RENT Module */}
+        {accessibleModules.includes('RENT' as ModuleId) && moduleStats.RENT && (
+          <ModuleCard
+            title="Vermietung"
+            description="Objekte & Buchungen"
+            icon={Key}
+            moduleId="RENT"
+            href="/rental"
+          >
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-2xl font-bold text-green-600">
+                  {(moduleStats.RENT as { availableItems: number }).availableItems}
+                </div>
+                <p className="text-xs text-muted-foreground">Frei zur Vermietung</p>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-red-600">
+                  {(moduleStats.RENT as { rentedItems: number }).rentedItems}
+                </div>
+                <p className="text-xs text-muted-foreground">Vermietet</p>
+              </div>
+            </div>
+            {(moduleStats.RENT as { pendingBookings: number }).pendingBookings > 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="h-4 w-4 text-yellow-500" />
+                <span className="text-muted-foreground">
+                  {(moduleStats.RENT as { pendingBookings: number }).pendingBookings} ausstehend
+                </span>
+              </div>
+            )}
+          </ModuleCard>
+        )}
+
         {/* ANALYTICS Module */}
         {accessibleModules.includes('ANALYTICS' as ModuleId) && moduleStats.ANALYTICS && (
           <ModuleCard 
