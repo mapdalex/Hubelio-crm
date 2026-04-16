@@ -27,6 +27,7 @@ import {
   FileCheck,
   Clock,
   FileText,
+  Key,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -90,6 +91,18 @@ const getModuleNavItems = (accessibleModules: ModuleId[]): NavItem[] => {
         { title: 'Arbeitszeit', url: '/worktime', icon: Clock, module: 'CORE' },
         { title: 'Worklog', url: '/worklog', icon: FileText, module: 'CORE' },
         { title: 'Todos', url: '/todos', icon: CheckSquare, module: 'CORE' },
+      ],
+    },
+    {
+      title: 'Vermietung',
+      url: '/rental',
+      icon: Key,
+      module: 'RENT',
+      items: [
+        { title: 'Dashboard', url: '/rental', icon: LayoutDashboard, module: 'RENT' },
+        { title: 'Kalender', url: '/rental/calendar', icon: CalendarDays, module: 'RENT' },
+        { title: 'Buchungen', url: '/rental/bookings', icon: FileCheck, module: 'RENT' },
+        { title: 'Objekte', url: '/rental/items', icon: Key, module: 'RENT' },
       ],
     },
     {
@@ -189,6 +202,7 @@ const adminNavItems: NavItem[] = [
       { title: 'Benutzer', url: '/settings/users', icon: Users },
       { title: 'E-Mail', url: '/settings/email', icon: Mail },
       { title: 'Worklog', url: '/settings/worklog', icon: FileText },
+      { title: 'Vermietung', url: '/settings/rental', icon: Key },
       { title: 'System', url: '/settings/system', icon: Settings },
     ],
   },

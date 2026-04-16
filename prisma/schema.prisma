@@ -120,6 +120,7 @@ model Customer {
   tickets         Ticket[]
   files           File[]
   worklogs        Worklog[]          @relation("CustomerWorklogs")
+  rentalBookings  RentalBooking[]    @relation("CustomerRentalBookings")
 
   @@index([companyId])
   @@index([customerNumber])
@@ -557,6 +558,11 @@ model Company {
   worklogs      Worklog[]      @relation("CompanyWorklogs")
   projects      Project[]      @relation("CompanyProjects")
   activities    Activity[]     @relation("CompanyActivities")
+  
+  // Vermietung
+  rentalCategories RentalCategory[] @relation("CompanyRentalCategories")
+  rentalItems      RentalItem[]     @relation("CompanyRentalItems")
+  rentalBookings   RentalBooking[]  @relation("CompanyRentalBookings")
 
   @@index([slug])
   @@index([isActive])
@@ -687,20 +693,24 @@ model ModulePermission {
 // ============================================
 
 enum CalendarType {
-  PERSONAL    // Persoenlicher Kalender des Users
-  COMPANY     // Firmenkalender
-  VACATION    // Urlaubskalender
-  SHARED      // Geteilter Kalender
+  PERSONAL         // Persoenlicher Kalender des Users
+  COMPANY          // Firmenkalender
+  VACATION         // Urlaubskalender
+  SHARED           // Geteilter Kalender
+  RENTAL           // Vermietungskalender
+  RENTAL_CLEANING  // Reinigungskalender (nach Mietende)
 }
 
 enum CalendarEventType {
-  EVENT       // Normales Event
-  VACATION    // Urlaubseintrag
-  MEETING     // Besprechung
-  REMINDER    // Erinnerung
-  TASK        // Aufgabe
-  BIRTHDAY    // Geburtstag
-  HOLIDAY     // Feiertag
+  EVENT            // Normales Event
+  VACATION         // Urlaubseintrag
+  MEETING          // Besprechung
+  REMINDER         // Erinnerung
+  TASK             // Aufgabe
+  BIRTHDAY         // Geburtstag
+  HOLIDAY          // Feiertag
+  RENTAL           // Vermietungseintrag
+  RENTAL_CLEANING  // Reinigungseintrag nach Buchungsende
 }
 
 model Calendar {
@@ -750,6 +760,7 @@ model CalendarEvent {
   createdBy User     @relation("UserCreatedEvents", fields: [createdById], references: [id])
   attendees EventAttendee[]
   requests  Request[]      // Verknuepfte Antraege (z.B. Urlaubsantraege)
+  rentalBookings RentalBooking[] // Verknuepfte Vermietungen
 
   @@index([calendarId])
   @@index([startDate])
@@ -968,4 +979,108 @@ model Activity {
 
   @@index([companyId])
   @@index([isActive])
+}
+
+// ============================================
+// VERMIETUNG (RENTAL)
+// ============================================
+
+model RentalCategory {
+  id          String   @id @default(cuid())
+  companyId   String?  // Multi-tenant
+  name        String   // z.B. "Zimmer", "Geraete", "Fahrzeuge"
+  description String?
+  icon        String?  // Icon-Name fuer UI
+  color       String   @default("#3b82f6")
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company     Company?       @relation("CompanyRentalCategories", fields: [companyId], references: [id])
+  items       RentalItem[]
+
+  @@index([companyId])
+  @@index([isActive])
+}
+
+model RentalItem {
+  id            String   @id @default(cuid())
+  companyId     String?  // Multi-tenant
+  categoryId    String
+  name          String   // z.B. "Zimmer 101", "Bohrmaschine Bosch"
+  description   String?
+  location      String?  // Standort
+  image         String?  // Bild-URL
+  
+  // Flexible Preisgestaltung (optional)
+  pricePerHour  Decimal? @db.Decimal(10, 2)
+  pricePerDay   Decimal? @db.Decimal(10, 2)
+  pricePerWeek  Decimal? @db.Decimal(10, 2)
+  pricePerMonth Decimal? @db.Decimal(10, 2)
+  currency      String   @default("EUR")
+  
+  // Reinigung (optional)
+  cleaningDays  Int?     // Anzahl Reinigungstage nach Buchungsende (null = keine Reinigung)
+  
+  // Zusaetzliche Infos
+  features      String[] // z.B. ["WLAN", "Klimaanlage", "Parkplatz"]
+  notes         String?
+  
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company       Company?        @relation("CompanyRentalItems", fields: [companyId], references: [id])
+  category      RentalCategory  @relation(fields: [categoryId], references: [id])
+  bookings      RentalBooking[]
+
+  @@index([companyId])
+  @@index([categoryId])
+  @@index([isActive])
+}
+
+enum RentalBookingStatus {
+  PENDING     // Anfrage
+  CONFIRMED   // Bestaetigt
+  ACTIVE      // Laufend (eingecheckt)
+  COMPLETED   // Abgeschlossen
+  CANCELLED   // Storniert
+}
+
+model RentalBooking {
+  id              String              @id @default(cuid())
+  bookingNumber   String              @unique
+  companyId       String?             // Multi-tenant
+  itemId          String              // Gemietetes Objekt
+  customerId      String              // Kunde aus Core
+  
+  // Zeitraum
+  startDate       DateTime
+  endDate         DateTime
+  
+  // Preisberechnung
+  totalPrice      Decimal?            @db.Decimal(10, 2)
+  currency        String              @default("EUR")
+  
+  status          RentalBookingStatus @default(PENDING)
+  notes           String?
+  
+  // Kalender-Integration
+  calendarEventId String?             // Verknuepfung zum Kalendereintrag
+  
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  company         Company?            @relation("CompanyRentalBookings", fields: [companyId], references: [id])
+  item            RentalItem          @relation(fields: [itemId], references: [id])
+  customer        Customer            @relation("CustomerRentalBookings", fields: [customerId], references: [id])
+  calendarEvent   CalendarEvent?      @relation(fields: [calendarEventId], references: [id])
+
+  @@index([companyId])
+  @@index([itemId])
+  @@index([customerId])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([status])
 }
