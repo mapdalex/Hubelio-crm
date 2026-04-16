@@ -186,30 +186,34 @@ export async function GET() {
     // RENT Module Stats
     if (accessibleModules.includes('RENT' as ModuleId)) {
       const whereRent = companyId ? { companyId } : {}
-      const now2 = new Date()
 
-      const [totalItems, activeBookings, pendingBookings] = await Promise.all([
+      const [totalItems, activeBookings, pendingBookingsCount] = await Promise.all([
         db.rentalItem.count({ where: { isActive: true, ...whereRent } }),
         db.rentalBooking.count({
           where: {
-            startDate: { lte: now2 },
-            endDate: { gte: now2 },
-            status: { in: ['CONFIRMED', 'ACTIVE'] },
+            startDate: { lte: now },
+            endDate: { gte: now },
+            status: { in: ['PENDING', 'CONFIRMED', 'ACTIVE'] },
             ...whereRent,
           },
         }),
         db.rentalBooking.count({
-          where: { status: 'PENDING', ...whereRent },
+          where: { 
+            status: 'PENDING',
+            OR: [
+              { startDate: { gt: now } },
+              { endDate: { lt: now } },
+            ],
+            ...whereRent,
+          },
         }),
       ])
 
-      const availableItems = totalItems - activeBookings
-
       stats.RENT = {
         totalItems,
-        availableItems: Math.max(0, availableItems),
+        availableItems: Math.max(0, totalItems - activeBookings),
         rentedItems: activeBookings,
-        pendingBookings,
+        pendingBookings: pendingBookingsCount,
       }
     }
 

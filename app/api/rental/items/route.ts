@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
         itemId: { in: itemIds },
         startDate: { lte: now },
         endDate: { gte: now },
-        status: { in: ['CONFIRMED', 'ACTIVE'] },
+        status: { in: ['PENDING', 'CONFIRMED', 'ACTIVE'] },
       },
       select: { itemId: true },
     })
