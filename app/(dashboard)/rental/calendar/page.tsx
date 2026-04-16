@@ -41,6 +41,7 @@ type RentalBooking = {
   item: {
     id: string
     name: string
+    cleaningDays?: number | null
     category: {
       id: string
       name: string
@@ -54,12 +55,23 @@ type RentalBooking = {
   }
 }
 
+type CalendarDayEntry = {
+  id: string
+  type: 'booking' | 'cleaning'
+  label: string
+  bookingNumber?: string
+  status?: string
+  startDate: string
+  endDate: string
+}
+
 const statusColors: Record<string, string> = {
   PENDING: 'bg-yellow-500',
   CONFIRMED: 'bg-blue-500',
   ACTIVE: 'bg-green-500',
   COMPLETED: 'bg-gray-400',
   CANCELLED: 'bg-red-500',
+  CLEANING: 'bg-amber-400',
 }
 
 const MONTHS = [
@@ -157,16 +169,49 @@ export default function RentalCalendarPage() {
     setCurrentDate(new Date())
   }
 
-  // Get bookings for a specific day
-  const getBookingsForDay = (day: number) => {
-    const date = new Date(year, month, day)
-    const dateStr = date.toISOString().split('T')[0]
-    
-    return filteredBookings.filter(booking => {
+  // Get all entries (bookings + cleaning blocks) for a specific day
+  const getEntriesForDay = (day: number): CalendarDayEntry[] => {
+    const dateStr = new Date(year, month, day).toISOString().split('T')[0]
+    const entries: CalendarDayEntry[] = []
+
+    filteredBookings.forEach(booking => {
       const start = new Date(booking.startDate).toISOString().split('T')[0]
       const end = new Date(booking.endDate).toISOString().split('T')[0]
-      return dateStr >= start && dateStr <= end
+
+      if (dateStr >= start && dateStr <= end) {
+        entries.push({
+          id: booking.id,
+          type: 'booking',
+          label: booking.item.name,
+          bookingNumber: booking.bookingNumber,
+          status: booking.status,
+          startDate: booking.startDate,
+          endDate: booking.endDate,
+        })
+      }
+
+      // Also compute cleaning block directly from booking data
+      if (booking.item.cleaningDays && booking.item.cleaningDays > 0) {
+        const cleaningStart = new Date(booking.endDate)
+        const cleaningEnd = new Date(booking.endDate)
+        cleaningEnd.setDate(cleaningEnd.getDate() + booking.item.cleaningDays)
+
+        const cleanStartStr = cleaningStart.toISOString().split('T')[0]
+        const cleanEndStr = cleaningEnd.toISOString().split('T')[0]
+
+        if (dateStr >= cleanStartStr && dateStr < cleanEndStr) {
+          entries.push({
+            id: `cleaning-${booking.id}`,
+            type: 'cleaning',
+            label: `Reinigung: ${booking.item.name}`,
+            startDate: cleaningStart.toISOString(),
+            endDate: cleaningEnd.toISOString(),
+          })
+        }
+      }
     })
+
+    return entries
   }
 
   // Check if day is today
@@ -289,7 +334,7 @@ export default function RentalCalendarPage() {
             {/* Day cells */}
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const day = i + 1
-              const dayBookings = getBookingsForDay(day)
+              const dayEntries = getEntriesForDay(day)
               const today = isToday(day)
 
               return (
@@ -310,21 +355,23 @@ export default function RentalCalendarPage() {
                   </div>
 
                   <div className="space-y-1">
-                    {dayBookings.slice(0, 3).map((booking) => (
+                    {dayEntries.slice(0, 3).map((entry) => (
                       <div
-                        key={booking.id}
+                        key={entry.id}
                         className={cn(
                           'truncate rounded px-1 py-0.5 text-xs text-white',
-                          statusColors[booking.status]
+                          entry.type === 'cleaning'
+                            ? statusColors['CLEANING']
+                            : statusColors[entry.status ?? '']
                         )}
-                        title={`${booking.item.name} - ${booking.customer.companyName || `${booking.customer.firstName} ${booking.customer.lastName}`}`}
+                        title={entry.label}
                       >
-                        {booking.item.name}
+                        {entry.label}
                       </div>
                     ))}
-                    {dayBookings.length > 3 && (
+                    {dayEntries.length > 3 && (
                       <div className="text-xs text-muted-foreground px-1">
-                        +{dayBookings.length - 3} weitere
+                        +{dayEntries.length - 3} weitere
                       </div>
                     )}
                   </div>
@@ -357,6 +404,10 @@ export default function RentalCalendarPage() {
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 rounded bg-gray-400" />
               <span className="text-sm">Abgeschlossen</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded bg-amber-400" />
+              <span className="text-sm">Reinigung</span>
             </div>
           </div>
         </CardContent>

@@ -104,6 +104,7 @@ export async function GET(request: NextRequest) {
               id: true,
               name: true,
               image: true,
+              cleaningDays: true,
               category: {
                 select: { id: true, name: true, color: true },
               },
@@ -285,32 +286,15 @@ export async function POST(request: NextRequest) {
         data: { calendarEventId: calendarEvent.id },
       })
 
-      // Create cleaning calendar event if item has cleaningDays configured
+      // Create cleaning event in the same RENTAL calendar if cleaningDays is configured
       if (item.cleaningDays && item.cleaningDays > 0) {
-        // Find or create cleaning calendar
-        let cleaningCalendar = await db.calendar.findFirst({
-          where: { companyId: session.companyId, type: 'RENTAL_CLEANING' },
-        })
-        if (!cleaningCalendar) {
-          cleaningCalendar = await db.calendar.create({
-            data: {
-              companyId: session.companyId,
-              name: 'Reinigung',
-              description: 'Reinigungskalender fuer Mietobjekte',
-              color: '#f59e0b', // amber for cleaning
-              type: 'RENTAL_CLEANING',
-              isPublic: true,
-            },
-          })
-        }
-
         const cleaningStart = new Date(endDate)
         const cleaningEnd = new Date(endDate)
         cleaningEnd.setDate(cleaningEnd.getDate() + item.cleaningDays)
 
         await db.calendarEvent.create({
           data: {
-            calendarId: cleaningCalendar.id,
+            calendarId: rentalCalendar.id,
             title: `Reinigung: ${item.name}`,
             description: `Reinigung nach Buchung ${bookingNumber}\nDauer: ${item.cleaningDays} Tag(e)`,
             eventType: 'RENTAL_CLEANING',
