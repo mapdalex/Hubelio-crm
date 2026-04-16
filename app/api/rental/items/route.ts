@@ -144,6 +144,7 @@ export async function POST(request: NextRequest) {
         currency: data.currency || 'EUR',
         features: data.features || [],
         notes: data.notes || null,
+        cleaningDays: data.cleaningDays != null ? parseInt(data.cleaningDays) : null,
         isActive: data.isActive !== false,
       },
       include: {

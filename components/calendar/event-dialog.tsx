@@ -69,6 +69,7 @@ const eventTypes = [
   { value: 'BIRTHDAY', label: 'Geburtstag' },
   { value: 'HOLIDAY', label: 'Feiertag' },
   { value: 'RENTAL', label: 'Vermietung' },
+  { value: 'RENTAL_CLEANING', label: 'Reinigung' },
 ]
 
 export function EventDialog({

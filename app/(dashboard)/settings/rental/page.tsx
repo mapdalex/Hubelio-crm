@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Edit2, Trash2, MoreHorizontal, Home, Wrench, Car, Box, MapPin, Euro } from 'lucide-react'
+import { Plus, Edit2, Trash2, MoreHorizontal, Home, Wrench, Car, Box, MapPin, Euro, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -68,6 +68,7 @@ type RentalItem = {
   currency: string
   features: string[]
   notes: string | null
+  cleaningDays: number | null
   isActive: boolean
   isAvailable?: boolean
   category: {
@@ -143,6 +144,7 @@ export default function RentalSettingsPage() {
     pricePerMonth: '',
     features: '',
     notes: '',
+    cleaningDays: '',
   })
 
   // Check permissions
@@ -256,6 +258,7 @@ export default function RentalSettingsPage() {
         pricePerMonth: itemForm.pricePerMonth ? parseFloat(itemForm.pricePerMonth) : null,
         features: itemForm.features ? itemForm.features.split(',').map((f) => f.trim()).filter(Boolean) : [],
         notes: itemForm.notes || null,
+        cleaningDays: itemForm.cleaningDays ? parseInt(itemForm.cleaningDays) : null,
       }
 
       const res = await fetch(url, {
@@ -278,6 +281,7 @@ export default function RentalSettingsPage() {
           pricePerMonth: '',
           features: '',
           notes: '',
+          cleaningDays: '',
         })
         loadData()
       } else {
@@ -596,6 +600,7 @@ export default function RentalSettingsPage() {
                             pricePerMonth: '',
                             features: '',
                             notes: '',
+                            cleaningDays: '',
                           })
                         }}
                         disabled={categories.length === 0}
@@ -778,6 +783,36 @@ export default function RentalSettingsPage() {
                               placeholder="Interne Notizen"
                             />
                           </div>
+
+                          {/* Reinigung */}
+                          <div className="rounded-lg border p-3 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="h-4 w-4 text-amber-500" />
+                              <Label className="font-medium">Reinigung (optional)</Label>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Anzahl Tage fuer die Reinigung nach dem Mietende. Ein eigener Reinigungseintrag wird automatisch im Kalender erstellt.
+                            </p>
+                            <div className="flex items-center gap-3">
+                              <Input
+                                id="item-cleaning-days"
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={itemForm.cleaningDays}
+                                onChange={(e) =>
+                                  setItemForm({ ...itemForm, cleaningDays: e.target.value })
+                                }
+                                placeholder="z.B. 1"
+                                className="w-28"
+                              />
+                              <span className="text-sm text-muted-foreground">
+                                {itemForm.cleaningDays && parseInt(itemForm.cleaningDays) > 0
+                                  ? `${itemForm.cleaningDays} Tag(e) Reinigung`
+                                  : 'Keine Reinigung'}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                         <DialogFooter>
                           <Button type="submit" disabled={isSubmitting}>
@@ -808,6 +843,7 @@ export default function RentalSettingsPage() {
                         <TableHead>Standort</TableHead>
                         <TableHead>Preis/Tag</TableHead>
                         <TableHead>Verfuegbarkeit</TableHead>
+                        <TableHead>Reinigung</TableHead>
                         <TableHead className="w-10"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -867,6 +903,16 @@ export default function RentalSettingsPage() {
                             </Badge>
                           </TableCell>
                           <TableCell>
+                            {item.cleaningDays && item.cleaningDays > 0 ? (
+                              <div className="flex items-center gap-1 text-sm">
+                                <Sparkles className="h-3 w-3 text-amber-500" />
+                                <span>{item.cleaningDays} Tag(e)</span>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -888,6 +934,7 @@ export default function RentalSettingsPage() {
                                       pricePerMonth: item.pricePerMonth?.toString() || '',
                                       features: item.features.join(', '),
                                       notes: item.notes || '',
+                                      cleaningDays: item.cleaningDays?.toString() || '',
                                     })
                                     setIsItemDialogOpen(true)
                                   }}

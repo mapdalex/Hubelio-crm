@@ -693,22 +693,24 @@ model ModulePermission {
 // ============================================
 
 enum CalendarType {
-  PERSONAL    // Persoenlicher Kalender des Users
-  COMPANY     // Firmenkalender
-  VACATION    // Urlaubskalender
-  SHARED      // Geteilter Kalender
-  RENTAL      // Vermietungskalender
+  PERSONAL         // Persoenlicher Kalender des Users
+  COMPANY          // Firmenkalender
+  VACATION         // Urlaubskalender
+  SHARED           // Geteilter Kalender
+  RENTAL           // Vermietungskalender
+  RENTAL_CLEANING  // Reinigungskalender (nach Mietende)
 }
 
 enum CalendarEventType {
-  EVENT       // Normales Event
-  VACATION    // Urlaubseintrag
-  MEETING     // Besprechung
-  REMINDER    // Erinnerung
-  TASK        // Aufgabe
-  BIRTHDAY    // Geburtstag
-  HOLIDAY     // Feiertag
-  RENTAL      // Vermietungseintrag
+  EVENT            // Normales Event
+  VACATION         // Urlaubseintrag
+  MEETING          // Besprechung
+  REMINDER         // Erinnerung
+  TASK             // Aufgabe
+  BIRTHDAY         // Geburtstag
+  HOLIDAY          // Feiertag
+  RENTAL           // Vermietungseintrag
+  RENTAL_CLEANING  // Reinigungseintrag nach Buchungsende
 }
 
 model Calendar {
@@ -1017,6 +1019,9 @@ model RentalItem {
   pricePerWeek  Decimal? @db.Decimal(10, 2)
   pricePerMonth Decimal? @db.Decimal(10, 2)
   currency      String   @default("EUR")
+  
+  // Reinigung (optional)
+  cleaningDays  Int?     // Anzahl Reinigungstage nach Buchungsende (null = keine Reinigung)
   
   // Zusaetzliche Infos
   features      String[] // z.B. ["WLAN", "Klimaanlage", "Parkplatz"]

@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Enddatum muss nach Startdatum liegen' }, { status: 400 })
     }
 
-    // Validate item
+    // Validate item (include cleaningDays)
     const item = await db.rentalItem.findUnique({
       where: { id: data.itemId },
     })
@@ -249,20 +249,16 @@ export async function POST(request: NextRequest) {
     // Create calendar event if requested
     if (data.createCalendarEvent) {
       // Find or create rental calendar
-      let calendar = await db.calendar.findFirst({
-        where: {
-          companyId: session.companyId,
-          type: 'RENTAL',
-        },
+      let rentalCalendar = await db.calendar.findFirst({
+        where: { companyId: session.companyId, type: 'RENTAL' },
       })
-
-      if (!calendar) {
-        calendar = await db.calendar.create({
+      if (!rentalCalendar) {
+        rentalCalendar = await db.calendar.create({
           data: {
             companyId: session.companyId,
             name: 'Vermietungen',
             description: 'Kalender fuer Mietobjekt-Buchungen',
-            color: '#ef4444', // Red for rental
+            color: '#ef4444',
             type: 'RENTAL',
             isPublic: true,
           },
@@ -271,14 +267,14 @@ export async function POST(request: NextRequest) {
 
       const calendarEvent = await db.calendarEvent.create({
         data: {
-          calendarId: calendar.id,
+          calendarId: rentalCalendar.id,
           title: `${item.name} - ${customer.firstName} ${customer.lastName}`,
           description: `Buchung: ${bookingNumber}\nKunde: ${customer.companyName || `${customer.firstName} ${customer.lastName}`}\n${data.notes || ''}`,
           eventType: 'RENTAL',
           startDate,
           endDate,
           allDay: true,
-          color: '#ef4444', // Red for booked
+          color: '#ef4444',
           createdById: session.userId,
         },
       })
@@ -288,6 +284,44 @@ export async function POST(request: NextRequest) {
         where: { id: booking.id },
         data: { calendarEventId: calendarEvent.id },
       })
+
+      // Create cleaning calendar event if item has cleaningDays configured
+      if (item.cleaningDays && item.cleaningDays > 0) {
+        // Find or create cleaning calendar
+        let cleaningCalendar = await db.calendar.findFirst({
+          where: { companyId: session.companyId, type: 'RENTAL_CLEANING' },
+        })
+        if (!cleaningCalendar) {
+          cleaningCalendar = await db.calendar.create({
+            data: {
+              companyId: session.companyId,
+              name: 'Reinigung',
+              description: 'Reinigungskalender fuer Mietobjekte',
+              color: '#f59e0b', // amber for cleaning
+              type: 'RENTAL_CLEANING',
+              isPublic: true,
+            },
+          })
+        }
+
+        const cleaningStart = new Date(endDate)
+        const cleaningEnd = new Date(endDate)
+        cleaningEnd.setDate(cleaningEnd.getDate() + item.cleaningDays)
+
+        await db.calendarEvent.create({
+          data: {
+            calendarId: cleaningCalendar.id,
+            title: `Reinigung: ${item.name}`,
+            description: `Reinigung nach Buchung ${bookingNumber}\nDauer: ${item.cleaningDays} Tag(e)`,
+            eventType: 'RENTAL_CLEANING',
+            startDate: cleaningStart,
+            endDate: cleaningEnd,
+            allDay: true,
+            color: '#f59e0b',
+            createdById: session.userId,
+          },
+        })
+      }
     }
 
     // Aktivitaetslog

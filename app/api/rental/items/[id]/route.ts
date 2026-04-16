@@ -136,6 +136,7 @@ export async function PUT(
         currency: data.currency,
         features: data.features,
         notes: data.notes,
+        cleaningDays: data.cleaningDays != null ? parseInt(data.cleaningDays) : null,
         isActive: data.isActive,
       },
       include: {
