@@ -87,11 +87,22 @@ const getModuleNavItems = (accessibleModules: ModuleId[]): NavItem[] => {
         { title: 'Kunden', url: '/customers', icon: Users, module: 'CORE' },
         { title: 'Kontakte', url: '/customers/contacts', icon: User, module: 'CORE' },
         { title: 'Kalender', url: '/calendar', icon: CalendarDays, module: 'CORE' },
-        { title: 'Vermietung', url: '/rental', icon: Key, module: 'RENT' },
         { title: 'Antraege', url: '/requests', icon: FileCheck, module: 'CORE' },
         { title: 'Arbeitszeit', url: '/worktime', icon: Clock, module: 'CORE' },
         { title: 'Worklog', url: '/worklog', icon: FileText, module: 'CORE' },
         { title: 'Todos', url: '/todos', icon: CheckSquare, module: 'CORE' },
+      ],
+    },
+    {
+      title: 'Vermietung',
+      url: '/rental',
+      icon: Key,
+      module: 'RENT',
+      items: [
+        { title: 'Dashboard', url: '/rental', icon: LayoutDashboard, module: 'RENT' },
+        { title: 'Kalender', url: '/rental/calendar', icon: CalendarDays, module: 'RENT' },
+        { title: 'Buchungen', url: '/rental/bookings', icon: FileCheck, module: 'RENT' },
+        { title: 'Objekte', url: '/rental/items', icon: Key, module: 'RENT' },
       ],
     },
     {
