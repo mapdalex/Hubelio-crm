@@ -138,6 +138,8 @@ export async function POST(request: NextRequest) {
           { shares: { some: { userId: session.userId, canEdit: true } } },
           // Jeder kann im Urlaubskalender seinen Urlaub eintragen
           ...(session.companyId ? [{ companyId: session.companyId, type: 'VACATION' }] : []),
+          // Vermietungskalender - alle Mitarbeiter koennen Buchungen sehen/erstellen
+          ...(session.companyId ? [{ companyId: session.companyId, type: 'RENTAL' }] : []),
           // Admins koennen in Firmenkalender schreiben
           ...(session.companyId && ['ADMIN', 'SUPERADMIN'].includes(session.role) ? [
             { companyId: session.companyId, type: 'COMPANY' }

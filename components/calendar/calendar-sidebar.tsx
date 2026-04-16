@@ -4,14 +4,14 @@ import { useState } from 'react'
 import { Calendar } from '@/components/ui/calendar'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
-import { Plus, Settings, Users, Building2, Plane, User } from 'lucide-react'
+import { Plus, Settings, Users, Building2, Plane, User, Key } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface CalendarItem {
   id: string
   name: string
   color: string
-  type: 'PERSONAL' | 'COMPANY' | 'VACATION' | 'SHARED'
+  type: 'PERSONAL' | 'COMPANY' | 'VACATION' | 'SHARED' | 'RENTAL'
   isVisible: boolean
   isOwner: boolean
   canEdit: boolean
@@ -36,6 +36,7 @@ const typeIcons = {
   COMPANY: Building2,
   VACATION: Plane,
   SHARED: Users,
+  RENTAL: Key,
 }
 
 const typeLabels = {
@@ -43,6 +44,7 @@ const typeLabels = {
   COMPANY: 'Firma',
   VACATION: 'Urlaub',
   SHARED: 'Geteilt',
+  RENTAL: 'Vermietung',
 }
 
 export function CalendarSidebar({
@@ -62,6 +64,7 @@ export function CalendarSidebar({
     COMPANY: calendars.filter(c => c.type === 'COMPANY'),
     VACATION: calendars.filter(c => c.type === 'VACATION'),
     SHARED: calendars.filter(c => c.type === 'SHARED'),
+    RENTAL: calendars.filter(c => c.type === 'RENTAL'),
   }
 
   return (
