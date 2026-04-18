@@ -286,24 +286,34 @@ export async function POST(request: NextRequest) {
         data: { calendarEventId: calendarEvent.id },
       })
 
-      // Create cleaning event on a single day X days after booking end
+      // Create recurring cleaning events - every X days during the booking period
       if (item.cleaningDays && item.cleaningDays > 0) {
-        const cleaningDate = new Date(endDate)
-        cleaningDate.setDate(cleaningDate.getDate() + item.cleaningDays)
+        const bookingStart = new Date(startDate)
+        const bookingEnd = new Date(endDate)
+        const interval = item.cleaningDays
 
-        await db.calendarEvent.create({
-          data: {
-            calendarId: rentalCalendar.id,
-            title: `Reinigung: ${item.name}`,
-            description: `Reinigung nach Buchung ${bookingNumber}\n${item.cleaningDays} Tag(e) nach Buchungsende`,
-            eventType: 'RENTAL_CLEANING',
-            startDate: cleaningDate,
-            endDate: cleaningDate,
-            allDay: true,
-            color: '#f59e0b',
-            createdById: session.userId,
-          },
-        })
+        // Start from X days after booking start, repeat every X days until booking end
+        const cleaningDate = new Date(bookingStart)
+        cleaningDate.setDate(cleaningDate.getDate() + interval)
+
+        while (cleaningDate <= bookingEnd) {
+          await db.calendarEvent.create({
+            data: {
+              calendarId: rentalCalendar.id,
+              title: `Reinigung: ${item.name}`,
+              description: `Reinigung fuer Buchung ${bookingNumber}\nAlle ${interval} Tag(e)`,
+              eventType: 'RENTAL_CLEANING',
+              startDate: new Date(cleaningDate),
+              endDate: new Date(cleaningDate),
+              allDay: true,
+              color: '#f59e0b',
+              createdById: session.userId,
+            },
+          })
+
+          // Move to next cleaning date
+          cleaningDate.setDate(cleaningDate.getDate() + interval)
+        }
       }
     }
 

@@ -190,21 +190,33 @@ export default function RentalCalendarPage() {
         })
       }
 
-      // Compute cleaning entry - appears on a single day X days after booking end
+      // Compute recurring cleaning entries - every X days during the booking period
       if (booking.item.cleaningDays && booking.item.cleaningDays > 0) {
-        const cleaningDate = new Date(booking.endDate)
-        cleaningDate.setDate(cleaningDate.getDate() + booking.item.cleaningDays)
+        const bookingStart = new Date(booking.startDate)
+        const bookingEnd = new Date(booking.endDate)
+        const interval = booking.item.cleaningDays
 
-        const cleaningDateStr = cleaningDate.toISOString().split('T')[0]
+        // Start from X days after booking start, repeat every X days until booking end
+        const cleaningDate = new Date(bookingStart)
+        cleaningDate.setDate(cleaningDate.getDate() + interval)
 
-        if (dateStr === cleaningDateStr) {
-          entries.push({
-            id: `cleaning-${booking.id}`,
-            type: 'cleaning',
-            label: `Reinigung: ${booking.item.name}`,
-            startDate: cleaningDate.toISOString(),
-            endDate: cleaningDate.toISOString(),
-          })
+        let cleaningIndex = 0
+        while (cleaningDate <= bookingEnd) {
+          const cleaningDateStr = cleaningDate.toISOString().split('T')[0]
+
+          if (dateStr === cleaningDateStr) {
+            entries.push({
+              id: `cleaning-${booking.id}-${cleaningIndex}`,
+              type: 'cleaning',
+              label: `Reinigung: ${booking.item.name}`,
+              startDate: cleaningDate.toISOString(),
+              endDate: cleaningDate.toISOString(),
+            })
+          }
+
+          // Move to next cleaning date
+          cleaningDate.setDate(cleaningDate.getDate() + interval)
+          cleaningIndex++
         }
       }
     })

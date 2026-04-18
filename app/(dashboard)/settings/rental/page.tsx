@@ -791,7 +791,7 @@ export default function RentalSettingsPage() {
                               <Label className="font-medium">Reinigung (optional)</Label>
                             </div>
                             <p className="text-xs text-muted-foreground">
-                              Der Reinigungseintrag wird X Tage nach dem Mietende im Kalender angezeigt. Geben Sie an, nach wie vielen Tagen die Reinigung erfolgen soll.
+                              Reinigung wird alle X Tage waehrend der Mietdauer im Kalender eingetragen. Z.B. bei 2 Tagen: Reinigung am 2., 4., 6. Tag usw.
                             </p>
                             <div className="flex items-center gap-3">
                               <Input
@@ -803,12 +803,12 @@ export default function RentalSettingsPage() {
                                 onChange={(e) =>
                                   setItemForm({ ...itemForm, cleaningDays: e.target.value })
                                 }
-                                placeholder="z.B. 1"
+                                placeholder="z.B. 2"
                                 className="w-28"
                               />
                               <span className="text-sm text-muted-foreground">
                                 {itemForm.cleaningDays && parseInt(itemForm.cleaningDays) > 0
-                                  ? `Reinigung ${itemForm.cleaningDays} Tag(e) nach Ende`
+                                  ? `Alle ${itemForm.cleaningDays} Tag(e) Reinigung`
                                   : 'Keine Reinigung'}
                               </span>
                             </div>
