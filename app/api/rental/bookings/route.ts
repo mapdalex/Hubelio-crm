@@ -286,20 +286,19 @@ export async function POST(request: NextRequest) {
         data: { calendarEventId: calendarEvent.id },
       })
 
-      // Create cleaning event in the same RENTAL calendar if cleaningDays is configured
+      // Create cleaning event on a single day X days after booking end
       if (item.cleaningDays && item.cleaningDays > 0) {
-        const cleaningStart = new Date(endDate)
-        const cleaningEnd = new Date(endDate)
-        cleaningEnd.setDate(cleaningEnd.getDate() + item.cleaningDays)
+        const cleaningDate = new Date(endDate)
+        cleaningDate.setDate(cleaningDate.getDate() + item.cleaningDays)
 
         await db.calendarEvent.create({
           data: {
             calendarId: rentalCalendar.id,
             title: `Reinigung: ${item.name}`,
-            description: `Reinigung nach Buchung ${bookingNumber}\nDauer: ${item.cleaningDays} Tag(e)`,
+            description: `Reinigung nach Buchung ${bookingNumber}\n${item.cleaningDays} Tag(e) nach Buchungsende`,
             eventType: 'RENTAL_CLEANING',
-            startDate: cleaningStart,
-            endDate: cleaningEnd,
+            startDate: cleaningDate,
+            endDate: cleaningDate,
             allDay: true,
             color: '#f59e0b',
             createdById: session.userId,

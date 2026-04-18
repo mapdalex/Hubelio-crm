@@ -190,22 +190,20 @@ export default function RentalCalendarPage() {
         })
       }
 
-      // Also compute cleaning block directly from booking data
+      // Compute cleaning entry - appears on a single day X days after booking end
       if (booking.item.cleaningDays && booking.item.cleaningDays > 0) {
-        const cleaningStart = new Date(booking.endDate)
-        const cleaningEnd = new Date(booking.endDate)
-        cleaningEnd.setDate(cleaningEnd.getDate() + booking.item.cleaningDays)
+        const cleaningDate = new Date(booking.endDate)
+        cleaningDate.setDate(cleaningDate.getDate() + booking.item.cleaningDays)
 
-        const cleanStartStr = cleaningStart.toISOString().split('T')[0]
-        const cleanEndStr = cleaningEnd.toISOString().split('T')[0]
+        const cleaningDateStr = cleaningDate.toISOString().split('T')[0]
 
-        if (dateStr >= cleanStartStr && dateStr < cleanEndStr) {
+        if (dateStr === cleaningDateStr) {
           entries.push({
             id: `cleaning-${booking.id}`,
             type: 'cleaning',
             label: `Reinigung: ${booking.item.name}`,
-            startDate: cleaningStart.toISOString(),
-            endDate: cleaningEnd.toISOString(),
+            startDate: cleaningDate.toISOString(),
+            endDate: cleaningDate.toISOString(),
           })
         }
       }
