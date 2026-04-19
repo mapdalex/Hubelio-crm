@@ -50,10 +50,6 @@ export async function GET(request: NextRequest) {
       where.folderId = null
     }
 
-    console.log('[v0] Files API - where filter:', JSON.stringify(where))
-    console.log('[v0] Files API - session companyId:', session.companyId)
-    console.log('[v0] Files API - folderId param:', folderId)
-
     const files = await db.file.findMany({
       where,
       include: {
@@ -70,14 +66,9 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' }
     })
 
-    console.log('[v0] Files API - found files count:', files.length)
-    console.log('[v0] Files API - files:', files.map(f => ({ id: f.id, folderId: (f as { folderId?: string }).folderId, companyId: (f as { companyId?: string }).companyId })))
-
     return NextResponse.json(files)
   } catch (error) {
-    console.error('[v0] Fehler beim Laden der Dateien:', error)
-    console.error('[v0] Error details:', error instanceof Error ? error.message : String(error))
-    console.error('[v0] Error stack:', error instanceof Error ? error.stack : 'No stack')
+    console.error('Fehler beim Laden der Dateien:', error)
     return NextResponse.json({ error: 'Interner Serverfehler' }, { status: 500 })
   }
 }
