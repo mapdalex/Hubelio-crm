@@ -57,10 +57,10 @@ export async function GET(request: NextRequest) {
           select: { id: true, name: true }
         },
         customer: {
-          select: { id: true, name: true }
+          select: { id: true, companyName: true, firstName: true, lastName: true }
         },
         folder: {
-          select: { id: true, name: true }
+          select: { id: true, name: true, isProtected: true }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
         uploadedById: session.userId,
         customerId: customerId || null,
         ticketId: ticketId || null,
+        folderId: folderId || null,
       },
       include: {
         uploadedBy: {
