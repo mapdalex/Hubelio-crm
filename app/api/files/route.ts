@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
           select: { id: true, name: true }
         },
         customer: {
-          select: { id: true, name: true }
+          select: { id: true, companyName: true, firstName: true, lastName: true }
         },
         folder: {
           select: { id: true, name: true, isProtected: true }
