@@ -261,3 +261,23 @@ export async function canAccessModule(moduleId: ModuleId): Promise<boolean> {
   // Check if module is in accessible modules
   return session.accessibleModules?.includes(moduleId) || false
 }
+
+// Check if session can manage protected content (create/delete protected folders, delete files in protected folders)
+// Only SUPERADMIN, ADMIN (global) or OWNER, ADMIN, MANAGER (company) can manage protected content
+export function canManageProtectedContent(session: SessionPayload | null): boolean {
+  if (!session) return false
+  
+  // SUPERADMIN can always manage protected content
+  if (session.role === 'SUPERADMIN') return true
+  
+  // ADMIN can manage protected content
+  if (session.role === 'ADMIN') return true
+  
+  // Check company role if available (Multi-Tenant)
+  if (session.companyRole) {
+    // OWNER, ADMIN, MANAGER can manage protected content
+    return ['OWNER', 'ADMIN', 'MANAGER'].includes(session.companyRole)
+  }
+  
+  return false
+}

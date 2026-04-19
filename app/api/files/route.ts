@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
         uploadedById: session.userId,
         customerId: customerId || null,
         ticketId: ticketId || null,
+        folderId: folderId || null,
       },
       include: {
         uploadedBy: {

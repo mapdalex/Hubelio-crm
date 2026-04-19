@@ -43,6 +43,7 @@ model User {
   assignedTodos  Todo[]          @relation("AssignedTodos")
   createdTodos   Todo[]          @relation("CreatedTodos")
   files          File[]
+  createdFolders Folder[]        @relation("FolderCreatedBy")
   customer       Customer?       @relation("CustomerUser")
   activityLogs   ActivityLog[]
   companyUsers   CompanyUser[]   // Multi-company membership
@@ -457,6 +458,28 @@ model Todo {
 // DATENABLAGE / FILES
 // ============================================
 
+model Folder {
+  id           String    @id @default(cuid())
+  companyId    String?   // Multi-tenant
+  name         String
+  parentId     String?
+  isProtected  Boolean   @default(false)  // Geschuetzte Ordner (nur Admin/Manager loeschbar)
+  createdById  String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relationen
+  ownerCompany Company?  @relation("CompanyFolders", fields: [companyId], references: [id])
+  parent       Folder?   @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children     Folder[]  @relation("FolderHierarchy")
+  files        File[]
+  createdBy    User      @relation("FolderCreatedBy", fields: [createdById], references: [id])
+
+  @@index([companyId])
+  @@index([parentId])
+  @@index([createdById])
+}
+
 model File {
   id           String   @id @default(cuid())
   companyId    String?  // Multi-tenant
@@ -469,6 +492,7 @@ model File {
   // Optionale Verknüpfungen
   customerId   String?
   ticketId     String?
+  folderId     String?
   uploadedById String
   
   createdAt    DateTime @default(now())
@@ -476,11 +500,13 @@ model File {
   ownerCompany Company?  @relation("CompanyFiles", fields: [companyId], references: [id])
   customer     Customer? @relation(fields: [customerId], references: [id])
   ticket       Ticket?   @relation(fields: [ticketId], references: [id])
+  folder       Folder?   @relation(fields: [folderId], references: [id], onDelete: Cascade)
   uploadedBy   User      @relation(fields: [uploadedById], references: [id])
 
   @@index([companyId])
   @@index([customerId])
   @@index([ticketId])
+  @@index([folderId])
 }
 
 // ============================================
@@ -549,6 +575,7 @@ model Company {
   customers     Customer[]     @relation("CompanyCustomers")
   tickets       Ticket[]       @relation("CompanyTickets")
   files         File[]         @relation("CompanyFiles")
+  folders       Folder[]       @relation("CompanyFolders")
   todos         Todo[]         @relation("CompanyTodos")
   activityLogs  ActivityLog[]
   emailSettings EmailSettings[] @relation("CompanyEmailSettings")
