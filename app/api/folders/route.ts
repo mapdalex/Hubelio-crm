@@ -24,20 +24,13 @@ export async function GET(request: NextRequest) {
       where.companyId = session.companyId
     }
 
-    // For correct file count, we need to filter files by companyId as well
-    const companyFilter = session.companyId ? { companyId: session.companyId } : {}
-    
     const folders = await db.folder.findMany({
       where,
       include: {
         _count: {
           select: {
-            files: {
-              where: companyFilter
-            },
-            children: {
-              where: companyFilter
-            }
+            files: true,
+            children: true
           }
         },
         createdBy: {

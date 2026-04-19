@@ -75,7 +75,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(files)
   } catch (error) {
-    console.error('Fehler beim Laden der Dateien:', error)
+    console.error('[v0] Fehler beim Laden der Dateien:', error)
+    console.error('[v0] Error details:', error instanceof Error ? error.message : String(error))
+    console.error('[v0] Error stack:', error instanceof Error ? error.stack : 'No stack')
     return NextResponse.json({ error: 'Interner Serverfehler' }, { status: 500 })
   }
 }
