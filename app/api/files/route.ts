@@ -50,6 +50,10 @@ export async function GET(request: NextRequest) {
       where.folderId = null
     }
 
+    console.log('[v0] Files API - where filter:', JSON.stringify(where))
+    console.log('[v0] Files API - session companyId:', session.companyId)
+    console.log('[v0] Files API - folderId param:', folderId)
+
     const files = await db.file.findMany({
       where,
       include: {
@@ -60,11 +64,14 @@ export async function GET(request: NextRequest) {
           select: { id: true, name: true }
         },
         folder: {
-          select: { id: true, name: true }
+          select: { id: true, name: true, isProtected: true }
         }
       },
       orderBy: { createdAt: 'desc' }
     })
+
+    console.log('[v0] Files API - found files count:', files.length)
+    console.log('[v0] Files API - files:', files.map(f => ({ id: f.id, folderId: (f as { folderId?: string }).folderId, companyId: (f as { companyId?: string }).companyId })))
 
     return NextResponse.json(files)
   } catch (error) {
