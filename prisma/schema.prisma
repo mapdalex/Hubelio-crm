@@ -122,6 +122,7 @@ model Customer {
   files           File[]
   worklogs        Worklog[]          @relation("CustomerWorklogs")
   rentalBookings  RentalBooking[]    @relation("CustomerRentalBookings")
+  software        Software[]         @relation("CustomerSoftware")
 
   @@index([companyId])
   @@index([customerNumber])
@@ -146,6 +147,7 @@ model Contact {
 
   customer Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
   worklogs Worklog[] @relation("ContactWorklogs")
+  software Software[] @relation("ContactSoftware")
 
   @@index([customerId])
 }
@@ -177,9 +179,71 @@ model Computer {
 
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   tickets  Ticket[]
+  software Software[] @relation("ComputerSoftware")
 
   @@index([customerId])
   @@index([name])
+}
+
+// ============================================
+// SOFTWARE & SERVICES (IT)
+// ============================================
+
+enum SoftwareType {
+  SOFTWARE          // Installierte Software
+  LICENSE           // Softwarelizenz
+  CLOUD_SERVICE     // Cloud Service (SaaS)
+  SUBSCRIPTION      // Abonnement
+  SUPPORT           // Support-Vertrag
+  OTHER             // Sonstiges
+}
+
+model Software {
+  id              String       @id @default(cuid())
+  name            String
+  type            SoftwareType @default(SOFTWARE)
+  version         String?
+  manufacturer    String?
+  description     String?
+  
+  // Lizenz-Infos
+  licenseKey      String?
+  licenseType     String?      // z.B. "Single", "Volume", "Subscription", "OEM"
+  seats           Int?         // Anzahl Lizenzen/Sitze
+  
+  // Kosten
+  purchasePrice   Decimal?     @db.Decimal(10, 2)
+  recurringPrice  Decimal?     @db.Decimal(10, 2) // Wiederkehrende Kosten
+  billingCycle    String?      // monthly, yearly, etc.
+  currency        String       @default("EUR")
+  
+  // Daten
+  purchaseDate    DateTime?
+  expiryDate      DateTime?    // Ablaufdatum Lizenz/Service
+  renewalDate     DateTime?    // Erneuerungsdatum
+  autoRenew       Boolean      @default(false)
+  
+  // Zuweisungen (optional)
+  customerId      String?      // Zugewiesen an Firma/Kunde
+  contactId       String?      // Zugewiesen an Kontakt
+  computerId      String?      // Installiert auf PC
+  
+  notes           String?
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Relations
+  customer        Customer?    @relation("CustomerSoftware", fields: [customerId], references: [id])
+  contact         Contact?     @relation("ContactSoftware", fields: [contactId], references: [id])
+  computer        Computer?    @relation("ComputerSoftware", fields: [computerId], references: [id])
+
+  @@index([customerId])
+  @@index([contactId])
+  @@index([computerId])
+  @@index([type])
+  @@index([expiryDate])
+  @@index([isActive])
 }
 
 // ============================================
