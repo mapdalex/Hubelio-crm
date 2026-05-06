@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Package, Edit, Trash2, MoreHorizontal, Calendar, Cloud, Key, RefreshCw, Monitor, User, Building2 } from 'lucide-react'
+import { Plus, Search, Package, Edit, Trash2, MoreHorizontal, Calendar, Cloud, Key, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -131,67 +131,42 @@ const BILLING_CYCLES = [
 function SoftwareForm({
   software,
   customers,
-  contacts,
-  computers,
   onSubmit,
   onCancel,
   isSubmitting,
 }: {
   software?: Software
   customers: Customer[]
-  contacts: Contact[]
-  computers: Computer[]
   onSubmit: (data: Record<string, unknown>) => void
   onCancel: () => void
   isSubmitting: boolean
 }) {
-  const [selectedCustomerId, setSelectedCustomerId] = useState(software?.customer?.id || '')
-  const [filteredContacts, setFilteredContacts] = useState<Contact[]>([])
-  const [filteredComputers, setFilteredComputers] = useState<Computer[]>([])
-
-  useEffect(() => {
-    if (selectedCustomerId) {
-      // Load contacts and computers for the selected customer
-      fetch(`/api/customers/${selectedCustomerId}/contacts`)
-        .then(res => res.json())
-        .then(data => setFilteredContacts(data.contacts || []))
-        .catch(() => setFilteredContacts([]))
-      
-      fetch(`/api/customers/${selectedCustomerId}/computers`)
-        .then(res => res.json())
-        .then(data => setFilteredComputers(data.computers || []))
-        .catch(() => setFilteredComputers([]))
-    } else {
-      setFilteredContacts([])
-      setFilteredComputers([])
-    }
-  }, [selectedCustomerId])
-
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
+    const form = e.currentTarget
     onSubmit({
       name: formData.get('name'),
       type: formData.get('type'),
-      version: formData.get('version'),
-      manufacturer: formData.get('manufacturer'),
-      description: formData.get('description'),
-      licenseKey: formData.get('licenseKey'),
-      licenseType: formData.get('licenseType'),
-      seats: formData.get('seats'),
-      purchasePrice: formData.get('purchasePrice'),
-      recurringPrice: formData.get('recurringPrice'),
-      billingCycle: formData.get('billingCycle'),
-      currency: formData.get('currency') || 'EUR',
+      version: formData.get('version') || null,
+      manufacturer: formData.get('manufacturer') || null,
+      description: formData.get('description') || null,
+      licenseKey: formData.get('licenseKey') || null,
+      licenseType: formData.get('licenseType') || null,
+      seats: formData.get('seats') || null,
+      purchasePrice: formData.get('purchasePrice') || null,
+      recurringPrice: formData.get('recurringPrice') || null,
+      billingCycle: formData.get('billingCycle') || null,
+      currency: 'EUR',
       purchaseDate: formData.get('purchaseDate') || null,
       expiryDate: formData.get('expiryDate') || null,
       renewalDate: formData.get('renewalDate') || null,
-      autoRenew: (e.currentTarget.querySelector('#autoRenew') as HTMLInputElement)?.checked ?? false,
+      autoRenew: (form.querySelector('#autoRenew') as HTMLInputElement)?.checked ?? false,
       customerId: formData.get('customerId') || null,
-      contactId: formData.get('contactId') || null,
-      computerId: formData.get('computerId') || null,
-      notes: formData.get('notes'),
-      isActive: (e.currentTarget.querySelector('#isActive') as HTMLInputElement)?.checked ?? true,
+      contactId: null,
+      computerId: null,
+      notes: formData.get('notes') || null,
+      isActive: (form.querySelector('#isActive') as HTMLInputElement)?.checked ?? true,
     })
   }
 
@@ -203,7 +178,6 @@ function SoftwareForm({
   return (
     <form onSubmit={handleSubmit}>
       <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
-        {/* Basis-Infos */}
         <div className="grid grid-cols-2 gap-4">
           <div className="grid gap-2">
             <Label htmlFor="name">Name *</Label>
@@ -225,20 +199,19 @@ function SoftwareForm({
         <div className="grid grid-cols-2 gap-4">
           <div className="grid gap-2">
             <Label htmlFor="manufacturer">Hersteller</Label>
-            <Input id="manufacturer" name="manufacturer" placeholder="z.B. Microsoft, Adobe" defaultValue={software?.manufacturer ?? ''} />
+            <Input id="manufacturer" name="manufacturer" placeholder="z.B. Microsoft" defaultValue={software?.manufacturer ?? ''} />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="version">Version</Label>
-            <Input id="version" name="version" placeholder="z.B. 2024, v5.0" defaultValue={software?.version ?? ''} />
+            <Input id="version" name="version" placeholder="z.B. 2024" defaultValue={software?.version ?? ''} />
           </div>
         </div>
 
         <div className="grid gap-2">
           <Label htmlFor="description">Beschreibung</Label>
-          <Textarea id="description" name="description" rows={2} placeholder="Kurze Beschreibung der Software/Service" defaultValue={software?.description ?? ''} />
+          <Textarea id="description" name="description" rows={2} defaultValue={software?.description ?? ''} />
         </div>
 
-        {/* Lizenz-Infos */}
         <div className="border-t pt-4">
           <h4 className="font-medium mb-3">Lizenz-Informationen</h4>
           <div className="grid grid-cols-2 gap-4">
@@ -259,12 +232,11 @@ function SoftwareForm({
             </div>
           </div>
           <div className="grid gap-2 mt-4">
-            <Label htmlFor="seats">Anzahl Lizenzen/Sitze</Label>
+            <Label htmlFor="seats">Anzahl Lizenzen</Label>
             <Input id="seats" name="seats" type="number" min="1" placeholder="z.B. 5" defaultValue={software?.seats ?? ''} />
           </div>
         </div>
 
-        {/* Kosten */}
         <div className="border-t pt-4">
           <h4 className="font-medium mb-3">Kosten</h4>
           <div className="grid grid-cols-3 gap-4">
@@ -277,7 +249,7 @@ function SoftwareForm({
               <Input id="recurringPrice" name="recurringPrice" type="number" step="0.01" min="0" placeholder="0.00" defaultValue={software?.recurringPrice ?? ''} />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="billingCycle">Abrechnungszyklus</Label>
+              <Label htmlFor="billingCycle">Zyklus</Label>
               <Select name="billingCycle" defaultValue={software?.billingCycle ?? ''}>
                 <SelectTrigger id="billingCycle"><SelectValue placeholder="Waehlen..." /></SelectTrigger>
                 <SelectContent>
@@ -290,7 +262,6 @@ function SoftwareForm({
           </div>
         </div>
 
-        {/* Daten */}
         <div className="border-t pt-4">
           <h4 className="font-medium mb-3">Laufzeit</h4>
           <div className="grid grid-cols-3 gap-4">
@@ -303,79 +274,41 @@ function SoftwareForm({
               <Input id="expiryDate" name="expiryDate" type="date" defaultValue={toInputDate(software?.expiryDate)} />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="renewalDate">Erneuerungsdatum</Label>
+              <Label htmlFor="renewalDate">Erneuerung</Label>
               <Input id="renewalDate" name="renewalDate" type="date" defaultValue={toInputDate(software?.renewalDate)} />
             </div>
           </div>
           <div className="flex items-center gap-2 mt-3">
-            <Checkbox id="autoRenew" name="autoRenew" defaultChecked={software?.autoRenew ?? false} />
+            <Checkbox id="autoRenew" defaultChecked={software?.autoRenew ?? false} />
             <Label htmlFor="autoRenew">Automatische Verlaengerung</Label>
           </div>
         </div>
 
-        {/* Zuweisungen */}
         <div className="border-t pt-4">
           <h4 className="font-medium mb-3">Zuweisung</h4>
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="customerId">Firma/Kunde</Label>
-              <Select 
-                name="customerId" 
-                defaultValue={software?.customer?.id ?? ''} 
-                onValueChange={(value) => setSelectedCustomerId(value)}
-              >
-                <SelectTrigger id="customerId"><SelectValue placeholder="Keine Zuweisung" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Keine Zuweisung</SelectItem>
-                  {customers.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.companyName || `${c.firstName} ${c.lastName}`} ({c.customerNumber})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="contactId">Kontakt</Label>
-                <Select name="contactId" defaultValue={software?.contact?.id ?? ''}>
-                  <SelectTrigger id="contactId"><SelectValue placeholder="Kein Kontakt" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Kein Kontakt</SelectItem>
-                    {filteredContacts.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.firstName} {c.lastName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="computerId">Installiert auf PC</Label>
-                <Select name="computerId" defaultValue={software?.computer?.id ?? ''}>
-                  <SelectTrigger id="computerId"><SelectValue placeholder="Kein PC" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Kein PC</SelectItem>
-                    {filteredComputers.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name} {c.type ? `(${c.type})` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+          <div className="grid gap-2">
+            <Label htmlFor="customerId">Firma/Kunde</Label>
+            <Select name="customerId" defaultValue={software?.customer?.id ?? ''}>
+              <SelectTrigger id="customerId"><SelectValue placeholder="Keine Zuweisung" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Keine Zuweisung</SelectItem>
+                {customers.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.companyName || `${c.firstName} ${c.lastName}`} ({c.customerNumber})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        {/* Notizen */}
         <div className="border-t pt-4">
           <div className="grid gap-2">
             <Label htmlFor="notes">Notizen</Label>
             <Textarea id="notes" name="notes" rows={2} defaultValue={software?.notes ?? ''} />
           </div>
           <div className="flex items-center gap-2 mt-3">
-            <Checkbox id="isActive" name="isActive" defaultChecked={software?.isActive ?? true} />
+            <Checkbox id="isActive" defaultChecked={software?.isActive ?? true} />
             <Label htmlFor="isActive">Aktiv</Label>
           </div>
         </div>
@@ -394,10 +327,7 @@ function SoftwareForm({
 export default function ITSoftwarePage() {
   const [software, setSoftware] = useState<Software[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
-  const [contacts, setContacts] = useState<Contact[]>([])
-  const [computers, setComputers] = useState<Computer[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('')
@@ -409,7 +339,6 @@ export default function ITSoftwarePage() {
 
   const loadSoftware = useCallback(async () => {
     setIsLoading(true)
-    setError(null)
     try {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -420,18 +349,10 @@ export default function ITSoftwarePage() {
       
       const res = await fetch(`/api/software?${params}`)
       const data = await res.json()
-      
-      if (data.error && !data.software) {
-        setError(data.error)
-        setSoftware([])
-      } else {
-        setSoftware(data.software || [])
-        setTotalPages(data.pagination?.totalPages || 1)
-        if (data.error) setError(data.error)
-      }
-    } catch (err) {
-      console.error('Error loading software:', err)
-      setError('Verbindungsfehler beim Laden der Software')
+      setSoftware(data.software || [])
+      setTotalPages(data.pagination?.totalPages || 1)
+    } catch (error) {
+      console.error('Error loading software:', error)
       setSoftware([])
     } finally {
       setIsLoading(false)
@@ -524,16 +445,11 @@ export default function ITSoftwarePage() {
     return SOFTWARE_TYPES.find(t => t.value === type)?.label || type
   }
 
-  const formatPrice = (price: string | null, currency: string) => {
-    if (!price) return '-'
-    return new Intl.NumberFormat('de-DE', { style: 'currency', currency }).format(parseFloat(price))
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Software & Services</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Software &amp; Services</h1>
           <p className="text-muted-foreground">Verwalten Sie Software, Lizenzen und Cloud-Services</p>
         </div>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
@@ -546,12 +462,10 @@ export default function ITSoftwarePage() {
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Neue Software anlegen</DialogTitle>
-              <DialogDescription>Erfassen Sie eine neue Software, Lizenz oder einen Cloud-Service</DialogDescription>
+              <DialogDescription>Erfassen Sie neue Software, Lizenzen oder Cloud-Services</DialogDescription>
             </DialogHeader>
             <SoftwareForm 
               customers={customers} 
-              contacts={contacts} 
-              computers={computers} 
               onSubmit={handleCreate} 
               onCancel={() => setIsCreateOpen(false)} 
               isSubmitting={isSubmitting} 
@@ -560,7 +474,6 @@ export default function ITSoftwarePage() {
         </Dialog>
       </div>
 
-      {/* Edit Dialog */}
       <Dialog open={!!editingSoftware} onOpenChange={(open) => !open && setEditingSoftware(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -571,8 +484,6 @@ export default function ITSoftwarePage() {
             <SoftwareForm
               software={editingSoftware}
               customers={customers}
-              contacts={contacts}
-              computers={computers}
               onSubmit={handleEdit}
               onCancel={() => setEditingSoftware(null)}
               isSubmitting={isSubmitting}
@@ -587,19 +498,19 @@ export default function ITSoftwarePage() {
             <div className="relative flex-1 min-w-[200px] max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Name, Hersteller, Kunde suchen..."
+                placeholder="Name, Hersteller oder Lizenz..."
                 className="pl-9"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1) }}
               />
             </div>
             <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(1) }}>
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Alle Typen" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">Alle Typen</SelectItem>
-                {SOFTWARE_TYPES.map((t) => (
+                {SOFTWARE_TYPES.map(t => (
                   <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                 ))}
               </SelectContent>
@@ -618,20 +529,13 @@ export default function ITSoftwarePage() {
           </div>
         </CardHeader>
         <CardContent>
-          {error && (
-            <div className="mb-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-700 dark:text-amber-400 text-sm">
-              <p className="font-medium">Hinweis:</p>
-              <p>{error}</p>
-              <p className="mt-2 text-xs opacity-75">Fuehre <code className="bg-muted px-1 py-0.5 rounded">npx prisma db push</code> aus, um die Datenbank zu aktualisieren.</p>
-            </div>
-          )}
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Spinner className="h-8 w-8" />
             </div>
           ) : software.length === 0 ? (
             <div className="text-center py-12">
-              <Package className="mx-auto h-12 w-12 text-muted-foreground" />
+              <Key className="mx-auto h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-semibold">Keine Software gefunden</h3>
               <p className="text-muted-foreground">
                 {search ? 'Versuchen Sie einen anderen Suchbegriff' : 'Legen Sie Ihre erste Software an'}
@@ -645,9 +549,8 @@ export default function ITSoftwarePage() {
                     <TableHead>Software</TableHead>
                     <TableHead>Typ</TableHead>
                     <TableHead>Zuweisung</TableHead>
-                    <TableHead>Lizenz</TableHead>
-                    <TableHead>Kosten</TableHead>
-                    <TableHead>Ablauf</TableHead>
+                    <TableHead>Lizenzen</TableHead>
+                    <TableHead>Ablaufdatum</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="w-10" />
                   </TableRow>
@@ -674,58 +577,20 @@ export default function ITSoftwarePage() {
                           <Badge variant="outline">{getTypeLabel(sw.type)}</Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="space-y-1">
-                            {sw.customer && (
-                              <div className="flex items-center gap-1 text-sm">
-                                <Building2 className="h-3 w-3 text-muted-foreground" />
-                                <Link href={`/customers/${sw.customer.id}`} className="hover:underline">
-                                  {sw.customer.companyName || `${sw.customer.firstName} ${sw.customer.lastName}`}
-                                </Link>
-                              </div>
-                            )}
-                            {sw.contact && (
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <User className="h-3 w-3" />
-                                {sw.contact.firstName} {sw.contact.lastName}
-                              </div>
-                            )}
-                            {sw.computer && (
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Monitor className="h-3 w-3" />
-                                {sw.computer.name}
-                              </div>
-                            )}
-                            {!sw.customer && !sw.contact && !sw.computer && (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </div>
+                          {sw.customer ? (
+                            <Link href={`/customers/${sw.customer.id}`} className="hover:underline text-sm">
+                              {sw.customer.companyName || `${sw.customer.firstName} ${sw.customer.lastName}`}
+                            </Link>
+                          ) : sw.contact ? (
+                            <span className="text-sm">{sw.contact.firstName} {sw.contact.lastName}</span>
+                          ) : sw.computer ? (
+                            <span className="text-sm text-muted-foreground">{sw.computer.name}</span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            {sw.licenseType && (
-                              <Badge variant="secondary" className="text-xs">{sw.licenseType}</Badge>
-                            )}
-                            {sw.seats && (
-                              <p className="text-xs text-muted-foreground">{sw.seats} Sitze</p>
-                            )}
-                            {!sw.licenseType && !sw.seats && '-'}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            {sw.recurringPrice ? (
-                              <p className="text-sm">
-                                {formatPrice(sw.recurringPrice, sw.currency)}
-                                {sw.billingCycle && (
-                                  <span className="text-xs text-muted-foreground">
-                                    /{sw.billingCycle === 'monthly' ? 'Mo' : sw.billingCycle === 'yearly' ? 'Jahr' : sw.billingCycle}
-                                  </span>
-                                )}
-                              </p>
-                            ) : sw.purchasePrice ? (
-                              <p className="text-sm">{formatPrice(sw.purchasePrice, sw.currency)}</p>
-                            ) : '-'}
-                          </div>
+                        <TableCell className="text-muted-foreground">
+                          {sw.seats ? `${sw.seats} Sitze` : '-'}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2 flex-wrap">
@@ -737,12 +602,6 @@ export default function ITSoftwarePage() {
                             ) : '-'}
                             {expiryStatus && (
                               <Badge variant={expiryStatus.variant} className="text-xs">{expiryStatus.label}</Badge>
-                            )}
-                            {sw.autoRenew && (
-                              <Badge variant="outline" className="text-xs">
-                                <RefreshCw className="h-2 w-2 mr-1" />
-                                Auto
-                              </Badge>
                             )}
                           </div>
                         </TableCell>
@@ -782,7 +641,9 @@ export default function ITSoftwarePage() {
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(sw.id)}>Loeschen</AlertDialogAction>
+                                <AlertDialogAction onClick={() => handleDelete(sw.id)}>
+                                  Loeschen
+                                </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
@@ -793,30 +654,27 @@ export default function ITSoftwarePage() {
                 </TableBody>
               </Table>
 
-              {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-muted-foreground">
+                <div className="flex items-center justify-center gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                  >
+                    Zurueck
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
                     Seite {page} von {totalPages}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                    >
-                      Zurueck
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={page === totalPages}
-                    >
-                      Weiter
-                    </Button>
-                  </div>
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                  >
+                    Weiter
+                  </Button>
                 </div>
               )}
             </>
