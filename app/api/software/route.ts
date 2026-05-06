@@ -118,6 +118,15 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error fetching software:', error)
+    // Handle case where Software table doesn't exist yet
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    if (errorMessage.includes('does not exist') || errorMessage.includes('Software')) {
+      return NextResponse.json({
+        software: [],
+        pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+        error: 'Software-Tabelle existiert noch nicht. Bitte Datenbank-Migration ausfuehren.',
+      })
+    }
     return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 })
   }
 }

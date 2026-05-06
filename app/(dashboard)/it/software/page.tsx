@@ -397,6 +397,7 @@ export default function ITSoftwarePage() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [computers, setComputers] = useState<Computer[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('')
@@ -408,6 +409,7 @@ export default function ITSoftwarePage() {
 
   const loadSoftware = useCallback(async () => {
     setIsLoading(true)
+    setError(null)
     try {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -418,10 +420,19 @@ export default function ITSoftwarePage() {
       
       const res = await fetch(`/api/software?${params}`)
       const data = await res.json()
-      setSoftware(data.software || [])
-      setTotalPages(data.pagination?.totalPages || 1)
-    } catch (error) {
-      console.error('Error loading software:', error)
+      
+      if (data.error && !data.software) {
+        setError(data.error)
+        setSoftware([])
+      } else {
+        setSoftware(data.software || [])
+        setTotalPages(data.pagination?.totalPages || 1)
+        if (data.error) setError(data.error)
+      }
+    } catch (err) {
+      console.error('Error loading software:', err)
+      setError('Verbindungsfehler beim Laden der Software')
+      setSoftware([])
     } finally {
       setIsLoading(false)
     }
@@ -607,6 +618,11 @@ export default function ITSoftwarePage() {
           </div>
         </CardHeader>
         <CardContent>
+          {error && (
+            <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+              {error}
+            </div>
+          )}
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Spinner className="h-8 w-8" />
