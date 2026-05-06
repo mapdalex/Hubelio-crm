@@ -619,8 +619,10 @@ export default function ITSoftwarePage() {
         </CardHeader>
         <CardContent>
           {error && (
-            <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
-              {error}
+            <div className="mb-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-700 dark:text-amber-400 text-sm">
+              <p className="font-medium">Hinweis:</p>
+              <p>{error}</p>
+              <p className="mt-2 text-xs opacity-75">Fuehre <code className="bg-muted px-1 py-0.5 rounded">npx prisma db push</code> aus, um die Datenbank zu aktualisieren.</p>
             </div>
           )}
           {isLoading ? (
