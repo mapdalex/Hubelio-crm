@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Monitor, Globe, AlertCircle, Clock, Server, Laptop, Shield, Ticket, ArrowRight } from 'lucide-react'
+import { DeviceExportDialog } from './device-export-dialog'
 import { format, addDays } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -411,9 +412,12 @@ async function ITDashboardStats() {
 export default function ITDashboardPage() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">IT-Verwaltung</h1>
-        <p className="text-muted-foreground">Uebersicht ueber alle Geraete und Domains</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">IT-Verwaltung</h1>
+          <p className="text-muted-foreground">Uebersicht ueber alle Geraete und Domains</p>
+        </div>
+        <DeviceExportDialog />
       </div>
       
       <Suspense fallback={<ITDashboardSkeleton />}>
