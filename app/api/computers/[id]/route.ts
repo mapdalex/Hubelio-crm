@@ -29,6 +29,9 @@ export async function GET(
         customer: {
           select: { id: true, customerNumber: true, companyName: true, firstName: true, lastName: true, companyId: true }
         },
+        contact: {
+          select: { id: true, firstName: true, lastName: true, position: true }
+        },
         tickets: {
           orderBy: { createdAt: 'desc' },
           take: 5,
@@ -76,6 +79,7 @@ export async function PATCH(
       where: { id },
       data: {
         name: data.name,
+        contactId: data.contactId || null,
         type: data.type || null,
         manufacturer: data.manufacturer || null,
         model: data.model || null,
