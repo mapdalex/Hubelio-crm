@@ -1,7 +1,83 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession, canViewInCompany } from '@/lib/auth'
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
+import { PDFDocument, rgb, StandardFonts, PDFFont } from 'pdf-lib'
+
+// Alle verfuegbaren Spalten mit Labels
+const COLUMN_CONFIG: Record<string, { label: string; minWidth: number }> = {
+  name: { label: 'Geraet', minWidth: 60 },
+  type: { label: 'Typ', minWidth: 40 },
+  contact: { label: 'Zugewiesen an', minWidth: 60 },
+  manufacturer: { label: 'Hersteller', minWidth: 50 },
+  model: { label: 'Modell', minWidth: 50 },
+  serialNumber: { label: 'Seriennummer', minWidth: 60 },
+  operatingSystem: { label: 'Betriebssystem', minWidth: 60 },
+  processor: { label: 'Prozessor', minWidth: 50 },
+  ram: { label: 'RAM', minWidth: 30 },
+  storage: { label: 'Speicher', minWidth: 40 },
+  ipAddress: { label: 'IP-Adresse', minWidth: 50 },
+  macAddress: { label: 'MAC-Adresse', minWidth: 70 },
+  purchaseDate: { label: 'Kaufdatum', minWidth: 50 },
+  warrantyUntil: { label: 'Garantie bis', minWidth: 50 },
+  notes: { label: 'Notizen', minWidth: 60 },
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Computer = any
+
+// Hilfsfunktion um Textbreite zu berechnen (approximiert)
+function getTextWidth(text: string, fontSize: number, font: PDFFont): number {
+  try {
+    return font.widthOfTextAtSize(text, fontSize)
+  } catch {
+    // Fallback: grobe Schaetzung
+    return text.length * fontSize * 0.5
+  }
+}
+
+// Hilfsfunktion um Spaltenwert zu holen
+function getColumnValue(computer: Computer, columnId: string): string {
+  switch (columnId) {
+    case 'name':
+      return computer.name || '-'
+    case 'type':
+      return computer.type || '-'
+    case 'contact':
+      return computer.contact 
+        ? `${computer.contact.firstName} ${computer.contact.lastName}`
+        : '-'
+    case 'manufacturer':
+      return computer.manufacturer || '-'
+    case 'model':
+      return computer.model || '-'
+    case 'serialNumber':
+      return computer.serialNumber || '-'
+    case 'operatingSystem':
+      return computer.operatingSystem || '-'
+    case 'processor':
+      return computer.processor || '-'
+    case 'ram':
+      return computer.ram || '-'
+    case 'storage':
+      return computer.storage || '-'
+    case 'ipAddress':
+      return computer.ipAddress || '-'
+    case 'macAddress':
+      return computer.macAddress || '-'
+    case 'purchaseDate':
+      return computer.purchaseDate 
+        ? new Date(computer.purchaseDate).toLocaleDateString('de-DE')
+        : '-'
+    case 'warrantyUntil':
+      return computer.warrantyUntil 
+        ? new Date(computer.warrantyUntil).toLocaleDateString('de-DE')
+        : '-'
+    case 'notes':
+      return computer.notes || '-'
+    default:
+      return '-'
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,10 +89,16 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const customerId = searchParams.get('customerId')
     const month = searchParams.get('month') // YYYY-MM
+    const columnsParam = searchParams.get('columns') // comma-separated column ids
 
     if (!customerId || !month) {
       return NextResponse.json({ error: 'customerId und month erforderlich' }, { status: 400 })
     }
+
+    // Parse columns - default to name, type, contact if not specified
+    const selectedColumns = columnsParam 
+      ? columnsParam.split(',').filter(col => col in COLUMN_CONFIG)
+      : ['name', 'type', 'contact']
 
     // Parse month parameter
     const [year, monthStr] = month.split('-')
@@ -98,10 +180,11 @@ export async function GET(request: NextRequest) {
     const { width, height } = page.getSize()
     let yPosition = height - 50
 
-    const fontSize = 10
+    const fontSize = 9
     const fontSizeSmall = 8
-    const lineHeight = 16
-    const margin = 50
+    const lineHeight = 14
+    const margin = 40
+    const contentWidth = width - (margin * 2)
 
     // Helper function to add a new page
     const addNewPage = () => {
@@ -117,32 +200,78 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Dynamische Spaltenbreiten berechnen
+    const calculateColumnWidths = () => {
+      const colWidths: Record<string, number> = {}
+      const padding = 8
+
+      for (const colId of selectedColumns) {
+        const config = COLUMN_CONFIG[colId]
+        // Start mit Header-Breite
+        let maxWidth = getTextWidth(config.label, fontSize, fontBold) + padding
+
+        // Maximale Breite ueber alle Daten berechnen
+        for (const computer of computers) {
+          const value = getColumnValue(computer, colId)
+          const valueWidth = getTextWidth(value, fontSizeSmall, font) + padding
+          maxWidth = Math.max(maxWidth, valueWidth, config.minWidth)
+        }
+
+        // Maximale Breite begrenzen (max 35% der Content-Breite pro Spalte)
+        colWidths[colId] = Math.min(maxWidth, contentWidth * 0.35)
+      }
+
+      // Gesamtbreite berechnen
+      let totalWidth = Object.values(colWidths).reduce((a, b) => a + b, 0)
+      
+      // Wenn Gesamtbreite > verfuegbare Breite, proportional skalieren
+      if (totalWidth > contentWidth) {
+        const scale = contentWidth / totalWidth
+        for (const colId of selectedColumns) {
+          colWidths[colId] = Math.max(colWidths[colId] * scale, COLUMN_CONFIG[colId].minWidth)
+        }
+        totalWidth = Object.values(colWidths).reduce((a, b) => a + b, 0)
+      }
+      
+      // Wenn Gesamtbreite < verfuegbare Breite, gleichmaessig verteilen
+      if (totalWidth < contentWidth) {
+        const extra = (contentWidth - totalWidth) / selectedColumns.length
+        for (const colId of selectedColumns) {
+          colWidths[colId] += extra
+        }
+      }
+
+      return colWidths
+    }
+
+    const colWidths = calculateColumnWidths()
+
     // ===== HEADER =====
     page.drawText('IT-Geraetezuweisungen', {
       x: margin,
       y: yPosition,
-      size: 20,
+      size: 18,
       font: fontBold,
       color: rgb(0.1, 0.1, 0.1),
     })
-    yPosition -= 35
+    yPosition -= 30
 
     // ===== CUSTOMER INFO =====
     page.drawText('Kundeninformationen', {
       x: margin,
       y: yPosition,
-      size: 14,
+      size: 12,
       font: fontBold,
       color: rgb(0.2, 0.2, 0.2),
     })
-    yPosition -= lineHeight * 1.5
+    yPosition -= lineHeight * 1.3
 
     // Customer name
     const customerName = customer.companyName || `${customer.firstName} ${customer.lastName}`
     page.drawText(`Kunde: ${customerName}`, {
       x: margin,
       y: yPosition,
-      size: 12,
+      size: 11,
       font,
     })
     yPosition -= lineHeight
@@ -155,26 +284,26 @@ export async function GET(request: NextRequest) {
       font,
       color: rgb(0.4, 0.4, 0.4),
     })
-    yPosition -= lineHeight * 1.5
+    yPosition -= lineHeight * 1.3
 
     // Period
     page.drawText(`Zeitraum: ${monthName} ${year}`, {
       x: margin,
       y: yPosition,
-      size: 12,
+      size: 11,
       font,
     })
-    yPosition -= lineHeight * 2
+    yPosition -= lineHeight * 1.8
 
     // ===== CONTACTS LIST =====
     page.drawText('Eingepflegte Kontakte', {
       x: margin,
       y: yPosition,
-      size: 14,
+      size: 12,
       font: fontBold,
       color: rgb(0.2, 0.2, 0.2),
     })
-    yPosition -= lineHeight * 1.2
+    yPosition -= lineHeight * 1.1
 
     if (customer.contacts.length === 0) {
       page.drawText('Keine Kontakte vorhanden', {
@@ -208,29 +337,25 @@ export async function GET(request: NextRequest) {
     page.drawText('Geraetezuweisungen', {
       x: margin,
       y: yPosition,
-      size: 14,
+      size: 12,
       font: fontBold,
       color: rgb(0.2, 0.2, 0.2),
     })
-    yPosition -= lineHeight * 1.5
+    yPosition -= lineHeight * 1.3
 
     // Table header
-    const colWidths = {
-      geraet: 140,
-      typ: 60,
-      kontakt: 120,
-      details: 175,
-    }
-
     let xPos = margin
-    page.drawText('Geraet', { x: xPos, y: yPosition, size: fontSize, font: fontBold })
-    xPos += colWidths.geraet
-    page.drawText('Typ', { x: xPos, y: yPosition, size: fontSize, font: fontBold })
-    xPos += colWidths.typ
-    page.drawText('Zugewiesen an', { x: xPos, y: yPosition, size: fontSize, font: fontBold })
-    xPos += colWidths.kontakt
-    page.drawText('Details', { x: xPos, y: yPosition, size: fontSize, font: fontBold })
-    yPosition -= lineHeight * 0.8
+    for (const colId of selectedColumns) {
+      const config = COLUMN_CONFIG[colId]
+      page.drawText(config.label, { 
+        x: xPos, 
+        y: yPosition, 
+        size: fontSize, 
+        font: fontBold 
+      })
+      xPos += colWidths[colId]
+    }
+    yPosition -= lineHeight * 0.6
 
     // Draw line under header
     page.drawLine({
@@ -256,33 +381,30 @@ export async function GET(request: NextRequest) {
         checkNewPage(lineHeight * 2)
         
         xPos = margin
-        // Device name
-        const deviceName = computer.name.length > 22 ? computer.name.substring(0, 20) + '...' : computer.name
-        page.drawText(deviceName, { x: xPos, y: yPosition, size: fontSizeSmall, font })
-        xPos += colWidths.geraet
-        
-        // Type
-        page.drawText(computer.type || '-', { x: xPos, y: yPosition, size: fontSizeSmall, font })
-        xPos += colWidths.typ
-        
-        // Contact
-        const contactName = computer.contact 
-          ? `${computer.contact.firstName} ${computer.contact.lastName}`
-          : 'Nicht zugewiesen'
-        const displayContact = contactName.length > 18 ? contactName.substring(0, 16) + '...' : contactName
-        page.drawText(displayContact, { 
-          x: xPos, 
-          y: yPosition, 
-          size: fontSizeSmall, 
-          font,
-          color: computer.contact ? rgb(0, 0, 0) : rgb(0.5, 0.5, 0.5),
-        })
-        xPos += colWidths.kontakt
-        
-        // Details (manufacturer + model)
-        const details = [computer.manufacturer, computer.model].filter(Boolean).join(' ')
-        const displayDetails = details.length > 28 ? details.substring(0, 26) + '...' : (details || '-')
-        page.drawText(displayDetails, { x: xPos, y: yPosition, size: fontSizeSmall, font, color: rgb(0.4, 0.4, 0.4) })
+        for (const colId of selectedColumns) {
+          const value = getColumnValue(computer, colId)
+          const colWidth = colWidths[colId]
+          
+          // Text kuerzen wenn noetig
+          let displayValue = value
+          const maxChars = Math.floor(colWidth / (fontSizeSmall * 0.55))
+          if (displayValue.length > maxChars) {
+            displayValue = displayValue.substring(0, maxChars - 2) + '..'
+          }
+          
+          const textColor = (colId === 'contact' && value === '-') 
+            ? rgb(0.5, 0.5, 0.5) 
+            : rgb(0, 0, 0)
+          
+          page.drawText(displayValue, { 
+            x: xPos, 
+            y: yPosition, 
+            size: fontSizeSmall, 
+            font,
+            color: textColor,
+          })
+          xPos += colWidth
+        }
         
         yPosition -= lineHeight
       }
@@ -298,16 +420,16 @@ export async function GET(request: NextRequest) {
       thickness: 0.5,
       color: rgb(0.7, 0.7, 0.7),
     })
-    yPosition -= lineHeight * 1.5
+    yPosition -= lineHeight * 1.3
 
     page.drawText(`Aenderungen im ${monthName} ${year}`, {
       x: margin,
       y: yPosition,
-      size: 14,
+      size: 12,
       font: fontBold,
       color: rgb(0.2, 0.2, 0.2),
     })
-    yPosition -= lineHeight * 1.5
+    yPosition -= lineHeight * 1.3
 
     if (assignmentChanges.length === 0) {
       page.drawText('Keine Aenderungen in diesem Zeitraum', {
@@ -346,7 +468,7 @@ export async function GET(request: NextRequest) {
         })
         
         page.drawText(`${computerName} - ${actionType}`, {
-          x: margin + 100,
+          x: margin + 90,
           y: yPosition,
           size: fontSizeSmall,
           font,
@@ -355,8 +477,8 @@ export async function GET(request: NextRequest) {
         
         // Details
         if (change.details) {
-          const detailsText = change.details.length > 80 
-            ? change.details.substring(0, 78) + '...' 
+          const detailsText = change.details.length > 90 
+            ? change.details.substring(0, 88) + '...' 
             : change.details
           page.drawText(detailsText, {
             x: margin + 10,
@@ -379,7 +501,7 @@ export async function GET(request: NextRequest) {
           yPosition -= lineHeight
         }
         
-        yPosition -= lineHeight * 0.3
+        yPosition -= lineHeight * 0.2
       }
     }
 
@@ -407,7 +529,7 @@ export async function GET(request: NextRequest) {
     })
     
     page.drawText(`Geraete gesamt: ${computers.length}`, {
-      x: width - margin - 100,
+      x: width - margin - 80,
       y: yPosition - 5,
       size: fontSizeSmall,
       font,
