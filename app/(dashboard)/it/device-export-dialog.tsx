@@ -189,14 +189,14 @@ export function DeviceExportDialog() {
     setIsExporting(true)
     try {
       const columnsParam = Array.from(selectedColumns).join(',')
-      let url = `/api/it/export/device-assignments?customerId=${selectedCustomerId}&month=${selectedMonth}&columns=${columnsParam}`
+      let fetchUrl = `/api/it/export/device-assignments?customerId=${selectedCustomerId}&month=${selectedMonth}&columns=${columnsParam}`
       
       // Optionaler Kontaktfilter
-      if (selectedContactId) {
-        url += `&contactId=${selectedContactId}`
+      if (selectedContactId && selectedContactId !== 'all') {
+        fetchUrl += `&contactId=${selectedContactId}`
       }
       
-      const response = await fetch(url)
+      const response = await fetch(fetchUrl)
       
       if (!response.ok) {
         throw new Error('Export fehlgeschlagen')
@@ -204,9 +204,9 @@ export function DeviceExportDialog() {
 
       // Get the blob and download
       const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
+      const blobUrl = URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.href = url
+      a.href = blobUrl
       
       // Get filename from Content-Disposition header or use default
       const contentDisposition = response.headers.get('Content-Disposition')
@@ -220,7 +220,7 @@ export function DeviceExportDialog() {
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
-      window.URL.revokeObjectURL(url)
+      URL.revokeObjectURL(blobUrl)
       
       setIsOpen(false)
     } catch (error) {
