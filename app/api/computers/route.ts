@@ -72,6 +72,14 @@ export async function GET(request: NextRequest) {
               lastName: true,
             },
           },
+          contact: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              position: true,
+            },
+          },
         },
       }),
       db.computer.count({ where }),
@@ -104,6 +112,7 @@ export async function POST(request: NextRequest) {
     const computer = await db.computer.create({
       data: {
         customerId: data.customerId,
+        contactId: data.contactId || null,
         name: data.name,
         type: data.type || null,
         manufacturer: data.manufacturer || null,

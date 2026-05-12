@@ -144,8 +144,9 @@ model Contact {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  customer Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  worklogs Worklog[] @relation("ContactWorklogs")
+  customer  Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  worklogs  Worklog[]  @relation("ContactWorklogs")
+  computers Computer[]
 
   @@index([customerId])
 }
@@ -157,6 +158,7 @@ model Contact {
 model Computer {
   id              String    @id @default(cuid())
   customerId      String
+  contactId       String?   // Optional: Zugewiesener Kontakt/Benutzer des Geraets
   name            String
   type            String?   // Desktop, Laptop, Server, etc.
   manufacturer    String?
@@ -176,9 +178,11 @@ model Computer {
   isActive        Boolean   @default(true)
 
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  contact  Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
   tickets  Ticket[]
 
   @@index([customerId])
+  @@index([contactId])
   @@index([name])
 }
 

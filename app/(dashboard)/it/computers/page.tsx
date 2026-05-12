@@ -65,6 +65,13 @@ type Customer = {
   lastName: string
 }
 
+type Contact = {
+  id: string
+  firstName: string
+  lastName: string
+  position: string | null
+}
+
 type Computer = {
   id: string
   name: string
@@ -82,7 +89,9 @@ type Computer = {
   warrantyUntil: string | null
   notes: string | null
   isActive: boolean
+  contactId: string | null
   customer: Customer
+  contact: Contact | null
 }
 
 function ComputerForm({
@@ -98,11 +107,42 @@ function ComputerForm({
   onCancel: () => void
   isSubmitting: boolean
 }) {
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(computer?.customer?.id || '')
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [selectedContactId, setSelectedContactId] = useState<string>(computer?.contactId || '')
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false)
+
+  // Lade Kontakte wenn Kunde ausgewaehlt wird
+  useEffect(() => {
+    if (!selectedCustomerId) {
+      setContacts([])
+      setSelectedContactId('')
+      return
+    }
+    
+    const loadContacts = async () => {
+      setIsLoadingContacts(true)
+      try {
+        const res = await fetch(`/api/customers/${selectedCustomerId}/contacts`)
+        const data = await res.json()
+        setContacts(data.contacts || [])
+      } catch (error) {
+        console.error('Error loading contacts:', error)
+        setContacts([])
+      } finally {
+        setIsLoadingContacts(false)
+      }
+    }
+    
+    loadContacts()
+  }, [selectedCustomerId])
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
     onSubmit({
-      customerId: formData.get('customerId'),
+      customerId: formData.get('customerId') || selectedCustomerId,
+      contactId: selectedContactId || null,
       name: formData.get('name'),
       type: formData.get('type'),
       manufacturer: formData.get('manufacturer'),
@@ -132,7 +172,15 @@ function ComputerForm({
         {!computer && (
           <div className="grid gap-2">
             <Label htmlFor="customerId">Kunde *</Label>
-            <Select name="customerId" required>
+            <Select 
+              name="customerId" 
+              required 
+              value={selectedCustomerId}
+              onValueChange={(value) => {
+                setSelectedCustomerId(value)
+                setSelectedContactId('')
+              }}
+            >
               <SelectTrigger id="customerId">
                 <SelectValue placeholder="Kunde waehlen" />
               </SelectTrigger>
@@ -144,6 +192,34 @@ function ComputerForm({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+        )}
+        
+        {/* Kontakt-Auswahl - optional */}
+        {(selectedCustomerId || computer) && (
+          <div className="grid gap-2">
+            <Label htmlFor="contactId">Zugewiesen an (Kontakt)</Label>
+            <Select 
+              value={selectedContactId}
+              onValueChange={setSelectedContactId}
+              disabled={isLoadingContacts}
+            >
+              <SelectTrigger id="contactId">
+                <SelectValue placeholder={isLoadingContacts ? "Lade Kontakte..." : "Kontakt waehlen (optional)"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Kein Kontakt</SelectItem>
+                {contacts.map((contact) => (
+                  <SelectItem key={contact.id} value={contact.id}>
+                    {contact.firstName} {contact.lastName}
+                    {contact.position && ` (${contact.position})`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Optional: Weisen Sie das Geraet einem bestimmten Ansprechpartner zu
+            </p>
           </div>
         )}
         <div className="grid grid-cols-2 gap-4">
@@ -434,7 +510,7 @@ export default function ITComputersPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Geraet</TableHead>
-                    <TableHead>Kunde</TableHead>
+                    <TableHead>Kunde / Kontakt</TableHead>
                     <TableHead>Typ</TableHead>
                     <TableHead>Betriebssystem</TableHead>
                     <TableHead>IP-Adresse</TableHead>
@@ -462,9 +538,17 @@ export default function ITComputersPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Link href={`/customers/${computer.customer.id}`} className="hover:underline">
-                            {computer.customer.companyName || `${computer.customer.firstName} ${computer.customer.lastName}`}
-                          </Link>
+                          <div>
+                            <Link href={`/customers/${computer.customer.id}`} className="hover:underline">
+                              {computer.customer.companyName || `${computer.customer.firstName} ${computer.customer.lastName}`}
+                            </Link>
+                            {computer.contact && (
+                              <p className="text-xs text-muted-foreground">
+                                {computer.contact.firstName} {computer.contact.lastName}
+                                {computer.contact.position && ` (${computer.contact.position})`}
+                              </p>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">{computer.type || 'Sonstige'}</Badge>
