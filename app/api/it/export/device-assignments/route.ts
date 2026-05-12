@@ -90,10 +90,14 @@ export async function GET(request: NextRequest) {
     const customerId = searchParams.get('customerId')
     const month = searchParams.get('month') // YYYY-MM
     const columnsParam = searchParams.get('columns') // comma-separated column ids
+    const contactId = searchParams.get('contactId') // optional - filter by contact
 
     if (!customerId || !month) {
       return NextResponse.json({ error: 'customerId und month erforderlich' }, { status: 400 })
     }
+    
+    // Kontaktfilter: "all" oder leer bedeutet kein Filter
+    const filterByContact = contactId && contactId !== 'all' ? contactId : null
 
     // Parse columns - default to name, type, contact if not specified
     const selectedColumns = columnsParam 
@@ -122,10 +126,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all computers for this customer with contact assignments
+    // Optional: Filter by specific contact
     const computers = await db.computer.findMany({
       where: {
         customerId,
         isActive: true,
+        ...(filterByContact && { contactId: filterByContact }),
       },
       include: {
         contact: {
@@ -293,7 +299,23 @@ export async function GET(request: NextRequest) {
       size: 11,
       font,
     })
-    yPosition -= lineHeight * 1.8
+    yPosition -= lineHeight
+    
+    // Contact filter info (if applicable)
+    if (filterByContact) {
+      const filteredContact = customer.contacts.find(c => c.id === filterByContact)
+      if (filteredContact) {
+        page.drawText(`Gefiltert nach Kontakt: ${filteredContact.firstName} ${filteredContact.lastName}`, {
+          x: margin,
+          y: yPosition,
+          size: fontSize,
+          font: fontBold,
+          color: rgb(0.2, 0.4, 0.6),
+        })
+        yPosition -= lineHeight
+      }
+    }
+    yPosition -= lineHeight * 0.8
 
     // ===== CONTACTS LIST =====
     page.drawText('Eingepflegte Kontakte', {

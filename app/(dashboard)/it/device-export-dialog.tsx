@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { FileDown, Calendar, Building2, Settings2 } from 'lucide-react'
+import { FileDown, Calendar, Building2, Settings2, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -32,6 +32,13 @@ type Customer = {
   lastName: string
 }
 
+type Contact = {
+  id: string
+  firstName: string
+  lastName: string
+  position: string | null
+}
+
 // Alle verfuegbaren Spalten fuer den Export
 const AVAILABLE_COLUMNS = [
   { id: 'name', label: 'Geraetename', default: true },
@@ -60,6 +67,11 @@ export function DeviceExportDialog() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('')
   const [selectedMonth, setSelectedMonth] = useState<string>('')
   const [isExporting, setIsExporting] = useState(false)
+  
+  // Kontaktauswahl
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false)
+  const [selectedContactId, setSelectedContactId] = useState<string>('')
   
   // Spaltenauswahl
   const [selectedColumns, setSelectedColumns] = useState<Set<ColumnId>>(() => {
@@ -105,6 +117,21 @@ export function DeviceExportDialog() {
       setIsLoadingCustomers(false)
     }
   }, [])
+  
+  const loadContacts = useCallback(async (customerId: string) => {
+    setIsLoadingContacts(true)
+    setContacts([])
+    setSelectedContactId('')
+    try {
+      const res = await fetch(`/api/contacts?customerId=${customerId}&limit=100`)
+      const data = await res.json()
+      setContacts(data.contacts || [])
+    } catch (error) {
+      console.error('Error loading contacts:', error)
+    } finally {
+      setIsLoadingContacts(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (isOpen && customers.length === 0) {
@@ -118,6 +145,16 @@ export function DeviceExportDialog() {
       setSelectedMonth(monthOptions[0].value)
     }
   }, [selectedMonth, monthOptions])
+  
+  // Kontakte laden wenn Kunde ausgewaehlt wird
+  useEffect(() => {
+    if (selectedCustomerId) {
+      loadContacts(selectedCustomerId)
+    } else {
+      setContacts([])
+      setSelectedContactId('')
+    }
+  }, [selectedCustomerId, loadContacts])
 
   const toggleColumn = (columnId: ColumnId) => {
     setSelectedColumns(prev => {
@@ -152,9 +189,14 @@ export function DeviceExportDialog() {
     setIsExporting(true)
     try {
       const columnsParam = Array.from(selectedColumns).join(',')
-      const response = await fetch(
-        `/api/it/export/device-assignments?customerId=${selectedCustomerId}&month=${selectedMonth}&columns=${columnsParam}`
-      )
+      let url = `/api/it/export/device-assignments?customerId=${selectedCustomerId}&month=${selectedMonth}&columns=${columnsParam}`
+      
+      // Optionaler Kontaktfilter
+      if (selectedContactId) {
+        url += `&contactId=${selectedContactId}`
+      }
+      
+      const response = await fetch(url)
       
       if (!response.ok) {
         throw new Error('Export fehlgeschlagen')
@@ -243,6 +285,49 @@ export function DeviceExportDialog() {
             )}
           </div>
 
+          {/* Optionale Kontaktauswahl - nur wenn Kunde ausgewaehlt */}
+          {selectedCustomerId && (
+            <div className="grid gap-2">
+              <Label htmlFor="contact" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Kontakt filtern (optional)
+              </Label>
+              {isLoadingContacts ? (
+                <div className="flex items-center justify-center py-4">
+                  <Spinner className="h-5 w-5" />
+                  <span className="ml-2 text-sm text-muted-foreground">Lade Kontakte...</span>
+                </div>
+              ) : contacts.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-2">Keine Kontakte fuer diesen Kunden vorhanden</p>
+              ) : (
+                <Select 
+                  value={selectedContactId} 
+                  onValueChange={setSelectedContactId}
+                >
+                  <SelectTrigger id="contact">
+                    <SelectValue placeholder="Alle Kontakte (kein Filter)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Kontakte (kein Filter)</SelectItem>
+                    {contacts.map((contact) => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        {contact.firstName} {contact.lastName}
+                        {contact.position && (
+                          <span className="ml-2 text-muted-foreground">
+                            ({contact.position})
+                          </span>
+                        )}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Waehlen Sie einen Kontakt um nur dessen Geraete zu exportieren
+              </p>
+            </div>
+          )}
+
           <div className="grid gap-2">
             <Label htmlFor="month" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
@@ -325,6 +410,12 @@ export function DeviceExportDialog() {
                 PDF fuer {selectedCustomer.companyName || `${selectedCustomer.firstName} ${selectedCustomer.lastName}`}
                 {' '}({monthOptions.find(m => m.value === selectedMonth)?.label})
               </p>
+              {selectedContactId && selectedContactId !== 'all' && (
+                <p className="text-muted-foreground">
+                  Gefiltert nach: {contacts.find(c => c.id === selectedContactId)?.firstName}{' '}
+                  {contacts.find(c => c.id === selectedContactId)?.lastName}
+                </p>
+              )}
               <p className="text-muted-foreground text-xs mt-1">
                 Spalten: {Array.from(selectedColumns).map(id => 
                   AVAILABLE_COLUMNS.find(c => c.id === id)?.label
