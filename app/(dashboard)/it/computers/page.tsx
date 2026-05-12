@@ -124,8 +124,12 @@ function ComputerForm({
       setIsLoadingContacts(true)
       try {
         const res = await fetch(`/api/customers/${selectedCustomerId}/contacts`)
+        if (!res.ok) {
+          throw new Error('Failed to load contacts')
+        }
         const data = await res.json()
-        setContacts(data.contacts || [])
+        // API gibt direkt ein Array zurueck
+        setContacts(Array.isArray(data) ? data : [])
       } catch (error) {
         console.error('Error loading contacts:', error)
         setContacts([])
