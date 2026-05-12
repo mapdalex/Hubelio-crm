@@ -204,15 +204,15 @@ function ComputerForm({
           <div className="grid gap-2">
             <Label htmlFor="contactId">Zugewiesen an (Kontakt)</Label>
             <Select 
-              value={selectedContactId}
-              onValueChange={setSelectedContactId}
+              value={selectedContactId || "none"}
+              onValueChange={(value) => setSelectedContactId(value === "none" ? "" : value)}
               disabled={isLoadingContacts}
             >
               <SelectTrigger id="contactId">
                 <SelectValue placeholder={isLoadingContacts ? "Lade Kontakte..." : "Kontakt waehlen (optional)"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Kein Kontakt</SelectItem>
+                <SelectItem value="none">Kein Kontakt</SelectItem>
                 {contacts.map((contact) => (
                   <SelectItem key={contact.id} value={contact.id}>
                     {contact.firstName} {contact.lastName}
