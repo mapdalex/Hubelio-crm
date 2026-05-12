@@ -75,6 +75,18 @@ export async function PATCH(
       return NextResponse.json({ error: 'Geraet nicht gefunden' }, { status: 404 })
     }
     
+    // Aenderungen tracken fuer Activity Log
+    const changes: string[] = []
+    if (existingComputer.name !== data.name) {
+      changes.push(`Name: ${existingComputer.name} -> ${data.name}`)
+    }
+    if (existingComputer.contactId !== (data.contactId || null)) {
+      changes.push(`Kontaktzuweisung geaendert`)
+    }
+    if (existingComputer.isActive !== data.isActive) {
+      changes.push(`Status: ${existingComputer.isActive ? 'Aktiv' : 'Inaktiv'} -> ${data.isActive ? 'Aktiv' : 'Inaktiv'}`)
+    }
+    
     const computer = await db.computer.update({
       where: { id },
       data: {
@@ -95,7 +107,24 @@ export async function PATCH(
         notes: data.notes || null,
         isActive: data.isActive,
       },
+      include: {
+        contact: { select: { firstName: true, lastName: true } },
+      },
     })
+    
+    // Activity Log erstellen wenn es Aenderungen gab
+    if (changes.length > 0) {
+      await db.activityLog.create({
+        data: {
+          userId: session.userId,
+          companyId: session.companyId || null,
+          action: 'UPDATE',
+          entity: 'Computer',
+          entityId: computer.id,
+          details: `Geraet ${computer.name} aktualisiert: ${changes.join(', ')}`,
+        },
+      })
+    }
     
     return NextResponse.json({ computer })
   } catch (error) {
